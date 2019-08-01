@@ -28,3 +28,13 @@
   * import org.apache.hadoop.io.compress.GzipCodec
   * Please use above codec to compress file, while saving in hdfs.
   */
+
+val filter = List("a","the","an", "as", "a","with","this","these","is","are","in", "for","to","and","The","of", "", " ")
+val data = sc.textFile("/user/cloudera/files/file1.txt,/user/cloudera/files/file2.txt,/user/cloudera/files/file3.txt")
+val flatData = data.flatMap(line => line.split("\\W"))
+val filtered = flatData.filter(w => !filter.contains(w))
+val count = filtered.map(w => (w, 1)).reduceByKey( (v, v1) => v + v1).sortBy(t => t._2, false)
+count.repartition(1).saveAsTextFile("/user/cloudera/exercise_9", classOf[org.apache.hadoop.io.compress.GzipCodec])
+
+// hdfs dfs -ls /user/cloudera/exercise_9
+// hdfs dfs -text /user/cloudera/exercise_9/part-00000.gz
