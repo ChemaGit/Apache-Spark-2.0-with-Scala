@@ -13,6 +13,14 @@ object KeyValuePairs {
 		wordPairRdd.foreach(println)
 
 		println("**************JOIN FUNCTIONS***********************")				
+		val rdd1 = sc.parallelize(List("Alice","Bob","Joe")).map(a => (a, 1))
+		val rdd2 = sc.parallelize(List("John","Alice","Daniel")).map(a => (a, 1))
+		val join = rdd1.join(rdd2).collect
+		join.foreach(println)
+		val lOuterJoin = rdd1.leftOuterJoin(rdd2).collect
+		lOuterJoin.foreach(println)
+		val rOuterJoin = rdd2.rightOuterJoin(rdd2).collect
+		rOuterJoin.foreach(println)
 
 		sc.stop()
 		spark.stop()
