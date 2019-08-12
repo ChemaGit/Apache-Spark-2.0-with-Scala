@@ -29,3 +29,25 @@ sqoop import \
 
 hdfs dfs -ls /user/cloudera/exercise_10/products
 */
+val filt = List("", " ")
+val products = sc.textFile("/user/cloudera/exercise_10/products/part-m-00000").map(line => line.split(",")).filter(arr => !filt.contains(arr(4)))
+val productsPrice = products.map(arr => (arr(4).toFloat, arr))
+
+val productsAsc = productsPrice.sortByKey()
+productsAsc.collect.foreach(t => println(t._1, t._2.mkString("[",",","]")))
+
+val productsDesc = productsPrice.sortByKey(false)
+productsDesc.collect.foreach(t => println(t._1, t._2.mkString("[",",","]")))
+
+val priceAndId = products.map(arr => ( (arr(4).toFloat, arr(0).toInt), arr.mkString("[",",","]")))
+val priceAndIdDesc = priceAndId.sortByKey(false)
+priceAndIdDesc.collect.foreach(println)
+
+val topPrice = products.top(10)(Ordering[Float].reverse.on(arr => arr(4).toFloat))
+val topPrice = products.top(10)(Ordering[Float].on(arr => arr(4).toFloat))
+val topPrice = products.top(10)(Ordering[Float].on(arr => -arr(4).toFloat))
+
+val takeOrdered = products.takeOrdered(10)(Ordering[Float].reverse.on(arr => arr(4).toFloat))
+val takeOrdered = products.takeOrdered(10)(Ordering[Float].on(arr => arr(4).toFloat))
+val takeOrdered = products.takeOrdered(10)(Ordering[Float].on(arr => -arr(4).toFloat))
+
