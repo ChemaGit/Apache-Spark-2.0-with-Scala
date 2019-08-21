@@ -1,7 +1,6 @@
 package spark_sql
 
 import org.apache.spark.sql._
-import org.apache.spark.sql.functions.concat_ws
 
 object QueryingUsingSparkSQL {
 	def main(args: Array[String]): Unit = {
@@ -34,8 +33,6 @@ object QueryingUsingSparkSQL {
 		val employeeDS = spark.read.json(path)
 		employeeDS.show()
 
-		import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
-		import org.apache.spark.sql.Encoder
 		import spark.implicits._
 
 		val employeeDF = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/files/EmployeeName.csv").map(line => line.split(",")).map(arr => (arr(0),arr(1))).toDF("id","name")
