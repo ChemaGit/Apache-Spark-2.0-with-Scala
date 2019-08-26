@@ -9,6 +9,7 @@ libraryDependencies += "org.apache.spark" % "spark-sql_2.11" % "2.2.0"
 libraryDependencies += "org.apache.spark" % "spark-sql-kafka-0-10_2.11" % "2.2.0"
 libraryDependencies += "org.apache.spark" % "spark-streaming_2.11" % "2.2.0"
 libraryDependencies += "org.apache.spark" %% "spark-streaming-kafka-0-10" % "2.2.0"
+libraryDependencies += "org.apache.spark" %% "spark-hive" % "2.2.0" //% "provided"
 
 libraryDependencies += "org.apache.hadoop" % "hadoop-common" % "2.7.0"
 libraryDependencies += "org.apache.hadoop" % "hadoop-client" % "2.7.0"

@@ -1,3 +1,5 @@
+package exercises_cert_1
+
 /** Question 15
   * Problem Scenario 80 : You have been given MySQL DB with following details.
   * user=retail_dba
@@ -12,7 +14,7 @@
   * 2. Now sort the products data sorted by product price per category, use productcategoryid
   * colunm to group by category
   */
-
+// Previous steps
 /*
 sqoop import \
 --connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
@@ -28,7 +30,26 @@ sqoop import \
 
 hdfs dfs -ls /user/cloudera/exercise_10/products
 */
-val filt = List(""," ")
-val products = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/exercise_10/products").map(line => line.split(",")).filter(arr => !filt.contains(arr(4))).map(arr => ( (arr(1).toInt, arr(4).toFloat),arr.mkString(",")))
-val sorted = products.sortByKey()
-sorted.collect.foreach({case(k,v) => println(v)})
+
+import org.apache.spark.sql._
+
+object exercise_1 {
+  def main(args: Array[String]): Unit = {
+    val spark = SparkSession.builder().appName("exercise 1").master("local").getOrCreate()
+    val sc = spark.sparkContext
+    sc.setLogLevel("ERROR")
+
+    val filt = List(""," ")
+    val products = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/exercise_10/products")
+      .map(line => line.split(","))
+      .filter(arr => !filt.contains(arr(4)))
+      .map(arr => ( (arr(1).toInt, arr(4).toFloat),arr.mkString(",")))
+
+    val sorted = products.sortByKey()
+    sorted.collect.foreach({case(k,v) => println(v)})
+
+    sc.stop()
+    spark.stop()
+  }
+}
+
