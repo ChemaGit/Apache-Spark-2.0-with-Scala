@@ -19,6 +19,17 @@ import org.apache.spark.sql._
 
 object exercise_9 {
   def main(args: Array[String]): Unit = {
+    val spark = SparkSession.builder().appName("exercise 9").master("local").getOrCreate()
+    val sc = spark.sparkContext
+    sc.setLogLevel("ERROR")
 
+    val file1 = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/files/file11.txt").map(line => line.split(",")).map(arr => (arr(0).toInt,(arr(1).toInt,arr(2).toInt)))
+    val file2 = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/files/file22.txt").map(line => line.split(",")).map(arr => (arr(0).toInt,(arr(1),arr(2))))
+    val joined = file1.join(file2)
+    val result = joined.map({case( (k,((v,c),(m,n)))) => c}).reduce({case(c, c1) => c + c1})
+    println(result)
+
+    sc.stop()
+    spark.stop()
   }
 }
