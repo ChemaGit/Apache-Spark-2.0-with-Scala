@@ -22,6 +22,15 @@ object exercise_10 {
     val sc = spark.sparkContext
     sc.setLogLevel("ERROR")
 
+    val lines = sc.parallelize(List("its fun to have fun,","but you have to know how."))
+    val r1 = lines.map(x => x.replace(",","").replace(".","").toLowerCase())
+    val r2 = r1.flatMap(x =>  x.split(" "))
+    val r3 = r2.map(x =>  (x, 1))
+    val r4 = r3.reduceByKey( (v, v1) => v + v1)
+    val r5 = r4.map(x => x.swap)
+    val r6 = r5.sortByKey(ascending=false)
+    r6.collect.foreach(println)
+
     sc.stop()
     spark.stop()
   }
