@@ -1,5 +1,6 @@
 package playing_with_rdds
 
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql._
 
 // sbt:Word Count> runMain WordCount hdfs://quickstart.cloudera/user/cloudera/loudacre/data/frostroad.txt
@@ -19,7 +20,9 @@ object WordCount {
     }
 
     val spark = SparkSession.builder().appName("Word Count").master("local").getOrCreate()
-    val sc = spark.sparkContext
+    val sconf = new SparkConf().setAppName("Word Count").set("spark.ui.port","4141")
+    //val sc = spark.sparkContext
+    val sc = new SparkContext(sconf)
     sc.setLogLevel("ERROR")
 
     val data = sc.textFile(args(0)).flatMap(line => line.split("\\W")).map(w => (w, 1)).reduceByKey( (v, v1) => v + v1).sortBy(t => t._2, false)
