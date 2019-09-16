@@ -7,6 +7,15 @@ import org.apache.spark.sql._
 // spark2-submit --class CountJPGs --master "yarn-client" target/scala-2.11/count-jpgs_2.11-0.1.jar hdfs://quickstart.cloudera/user/cloudera/loudacre/data/weblogs/*
 // spark2-submit --class CountJPGs --master "yarn" target/scala-2.11/count-jpgs_2.11-0.1.jar hdfs://quickstart.cloudera/user/cloudera/loudacre/data/weblogs/*
 
+// spark2-submit --class CountJPGs --master "yarn" --name 'Count JPGs' target/scala-2.11/count-jpgs_2.11-0.1.jar hdfs://quickstart.cloudera/user/cloudera/loudacre/data/weblogs/*
+
+/*myspark.conf
+spark.app.name My Spark App
+spark.master yarn-client
+spark.executor.memory 400M
+*/
+// spark2-submit --properties-file myspark.conf --class CountJPGs  target/scala-2.11/count-jpgs_2.11-0.1.jar hdfs://quickstart.cloudera/user/cloudera/loudacre/data/weblogs/*
+
 object CountJPGs {
   def main(args: Array[String]) {
     if (args.length < 1) {
