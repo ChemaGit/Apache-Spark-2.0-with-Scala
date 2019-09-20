@@ -20,6 +20,13 @@ object exercise_2 {
     val sc = spark.sparkContext
     sc.setLogLevel("ERROR")
 
+    val a = sc.parallelize(List("dog", "tiger", "lion", "cat", "spider", "eagle"), 2)
+    val b = a.keyBy(_.length)
+    val c = sc.parallelize(List("ant", "falcon", "squid"), 2)
+    val d = c.keyBy(_.length)
+    val e = b.subtractByKey(d)
+    e.foreach(println)
+
     sc.stop()
     spark.stop()
   }
