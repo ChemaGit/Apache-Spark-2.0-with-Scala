@@ -79,6 +79,19 @@ object Persistence {
 			*/
 		myrdd2.unpersist()
 
+		/**
+			* Essential	Points
+			*
+			* Spark	keeps	track	of	each	RDD’s	lineage
+			* – Provides	fault	tolerance
+			* By	default,	every	RDD	operation	executes	the	entire	lineage
+			* If	an	RDD	will	be	used	multiple	times,	persist	it	to	avoid	re-computation
+			* Persistence	options
+			* – Location—memory	only,	memory	and	disk,	disk	only
+			* – Format—in-memory	data	can	be	serialized	to	save	memory	(but	at	the cost	of	performance)
+			* – Replication—saves	data	on	multiple	locations	in	case	a	node	goes	down, for	job	recovery	without	recomputation
+			*/
+
 		sc.stop()
 		spark.stop()
 	}
