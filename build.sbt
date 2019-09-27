@@ -22,6 +22,9 @@ libraryDependencies += "org.apache.hadoop" % "hadoop-client" % "2.7.0"
 // https://mvnrepository.com/artifact/org.apache.spark/spark-mllib
 libraryDependencies += "org.apache.spark" %% "spark-mllib" % "2.2.0" //% "runtime"
 
+// https://mvnrepository.com/artifact/com.databricks/spark-avro
+libraryDependencies += "com.databricks" %% "spark-avro" % "4.0.0"
+libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.12"
 dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.9.5"
 dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.5"
 dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.9.5"
