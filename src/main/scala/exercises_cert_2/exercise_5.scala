@@ -41,8 +41,6 @@ sqoop import \
 --outdir /home/cloudera/outdir \
 --bindir /home/cloudera/bindir \
 --num-mappers 1
-
-
  */
 
 import org.apache.spark.sql._
@@ -64,6 +62,18 @@ object exercise_5 {
     val joined = orders.join(orderItems)
 
     joined.take(20).foreach(println)
+
+	// 3. Calculate total revenue perday and per order
+	val selectData = joined.map({case( (id,(date,subtotal))) => ((id,date),subtotal)})
+	val result = selectData.reduceByKey( (v,c) => v + c)
+	result.collect.foreach(println)    	
+
+	// 4. Calculate total and average revenue for each date. - combineByKey - aggregateByKey
+	val selectData2 = joined.map({case( (id,(date, subtotal)) ) => (date, (subtotal,1))})
+	
+	// reduceByKey
+	val redByKey = selectData2.reduceByKey( (v,c) => (v._1 + c._1, v._2 + c._2)).mapValues({case(s,n) => (s, s / n)}).sortByKey()
+	redByKey.take(10).foreach(println)
 
     sc.stop()
     spark.stop()
