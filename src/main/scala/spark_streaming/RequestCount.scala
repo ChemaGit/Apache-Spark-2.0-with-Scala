@@ -18,7 +18,9 @@ object RequestCount {
 		val sortedreqs = userreqs.map(pair => pair.swap).transform(rdd => rdd.sortByKey(false))
 		sortedreqs.foreachRDD((rdd, time) => {
 			println("Top ips @ " + time)
-			rdd.take(5).foreach(pair => println("Ips: %s (%s)\n".format(pair._2, pair._1)))
+			rdd
+        .take(5)
+        .foreach(pair => println("Ips: %s (%s)\n".format(pair._2, pair._1)))
 		})
 
 		/* ----- Example 3: total counts for all users over time ----- */
@@ -46,16 +48,20 @@ object RequestCount {
 
 		/* ----- Example 4: Display top 5 users over 30 second window, output every 6 seconds  ----- */
 
-		val reqcountsByWindow = mystream.
-			map(line => (line.split(' ')(2),1)).
-			reduceByKeyAndWindow((x: Int,y: Int) => x+y, Seconds(30),Seconds(6))
-		val topreqsByWindow=reqcountsByWindow.
-			map(pair => pair.swap).transform(rdd => rdd.sortByKey(false))
+		val reqcountsByWindow = mystream
+      .map(line => (line.split(' ')(2),1))
+      .reduceByKeyAndWindow((x: Int,y: Int) => x+y, Seconds(30),Seconds(6))
+
+		val topreqsByWindow=reqcountsByWindow
+      .map(pair => pair.swap)
+      .transform(rdd => rdd.sortByKey(false))
+
 		topreqsByWindow.foreachRDD(rdd => {
 			println("Top users by window:")
-			rdd.take(5).foreach(pair => printf("User: %s (%s)\n",pair._2, pair._1))
-		}
-		)
+			rdd
+        .take(5)
+        .foreach(pair => printf("User: %s (%s)\n",pair._2, pair._1))
+		})
 
 
 		// after setup, start the stream
