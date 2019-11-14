@@ -4,6 +4,19 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 
 /**
+  * start_logs
+  * tail_logs | nc -lk 4444
+  * stop_logs
+  *
+  *
+  * Use spark-submit to run your app locally and be sure to specify two threads: at least two threads or nodes are required to run a streaming app, while the VM cluster has only one.
+  * The StreamingLogs app takes two parameters: the hostname and the port number to connect the DStream to.
+  *
+  *
+  * spark-submit --master 'local[2]' --class stubs.StreamingLogs target/processingMultibatches-1.0.jar localhost 1234
+  */
+
+/**
   * STATE OPERATIONS
   */
 object ProcessingMultiBatches {
