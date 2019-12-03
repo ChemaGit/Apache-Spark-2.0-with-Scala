@@ -7,6 +7,12 @@ scalaVersion := "2.11.8"
 libraryDependencies += "com.typesafe" % "config" % "1.3.2"
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25"
 
+dependencyOverrides += "junit" % "junit" % "4.10" % Test
+
+// https://mvnrepository.com/artifact/org.scalatest/scalatest
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.0-SNAP3"
+
+
 libraryDependencies += "org.apache.spark" %% "spark-core" % "2.2.0"
 libraryDependencies += "org.apache.spark" % "spark-sql_2.11" % "2.2.0"
 libraryDependencies += "org.apache.spark" % "spark-sql-kafka-0-10_2.11" % "2.2.0"
