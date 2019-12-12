@@ -65,6 +65,17 @@ object exercise_9 {
     techDF.createOrReplaceTempView("technology")
     salaryDF.createOrReplaceTempView("salary")
 
+    // TODO: finish it
+    val result = spark.sqlContext.sql("""SELECT first, last, tech, salary FROM technology JOIN salary ON(first = firstN AND last = lastN) ORDER BY salary DESC""")
+    result.show()
+
+    result
+      .repartition(1)
+      .rdd
+      .map(r => "%s,%s,%s,%s".format(r(0).toString,r(1).toString,r(2).toString,r(3).toString))
+      .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercises/question_74")
+
+
     sc.stop()
     spark.stop()
   }
