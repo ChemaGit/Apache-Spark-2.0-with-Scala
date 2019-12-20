@@ -28,7 +28,7 @@ sqoop import \
 --target-dir /user/cloudera/tables/orders \
 --outdir /home/cloudera/outdir \
 --bindir /home/cloudera/bindir \
---num-mappers 1
+--num-mappers 8
 
 sqoop import \
 --connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
@@ -40,7 +40,7 @@ sqoop import \
 --target-dir /user/cloudera/tables/order_items \
 --outdir /home/cloudera/outdir \
 --bindir /home/cloudera/bindir \
---num-mappers 1
+--num-mappers 8
 */
 
 import org.apache.spark.sql._

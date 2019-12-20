@@ -43,8 +43,8 @@ object exercise_1 {
     val bad = data.filter(r => !regFilterDate(r(1)))
     bad.collect.foreach(x => println(x.mkString("|")))
 
-    good.map(r => r.mkString("|")).repartition(1).saveAsTextFile("/user/cloudera/question37/good")
-    bad.map(r => r.mkString("|")).repartition(1).saveAsTextFile("/user/cloudera/question37/bad")
+    good.map(r => r.mkString("|")).saveAsTextFile("/user/cloudera/question37/good")
+    bad.map(r => r.mkString("|")).saveAsTextFile("/user/cloudera/question37/bad")
 
     sc.stop()
     spark.stop()

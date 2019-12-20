@@ -34,7 +34,7 @@ sqoop import \
 --target-dir /user/cloudera/exercise_9/orders \
 --outdir /home/cloudera/outdir \
 --bindir /home/cloudera/bindir \
---num-mappers 1
+--num-mappers 8
 
 $ hdfs dfs -ls /user/cloudera/exercise_9/orders
 $ hdfs dfs -text /user/cloudera/exercise_9/orders/part-m* | head -n 20
@@ -49,7 +49,7 @@ sqoop import \
 --as-textfile \
 --outdir /home/cloudera/outdir \
 --bindir /home/cloudera/bindir \
---num-mappers 1
+--num-mappers 8
 
 $ hdfs dfs -ls /user/cloudera/exercise_9/order_items
 $ hdfs dfs -text /user/cloudera/exercise_9/order_items/part-m* | head -n 20
@@ -71,7 +71,6 @@ object exercise_9 {
     countByKey.foreach(println)
     sc.parallelize(countByKey.toList)
       .sortBy(t => t._2, false)
-      .repartition(1)
       .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercise_9/count_by_key")
     println("*********************")
 
@@ -83,7 +82,6 @@ object exercise_9 {
       .collect
       .foreach(println)
     groupByKey
-        .repartition(1)
         .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercise_9/group_by_key")
     println("*********************")
 
@@ -95,7 +93,6 @@ object exercise_9 {
       .collect
       .foreach(println)
     reduceByKey
-        .repartition(1)
         .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercise_9/reduce_by_key")
     println("*********************")
 
@@ -105,7 +102,6 @@ object exercise_9 {
     aggregateByKey.collect
         .foreach(println)
     aggregateByKey
-        .repartition(1)
         .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercise_9/aggregate_by_key")
 
     println("*********************")
@@ -116,9 +112,7 @@ object exercise_9 {
       .collect
         .foreach(println)
     combineByKey
-        .repartition(1)
         .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercise_9/combine_by_key")
-
 
     sc.stop()
     spark.stop()

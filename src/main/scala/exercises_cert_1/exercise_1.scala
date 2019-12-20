@@ -26,7 +26,7 @@ sqoop import \
 --target-dir /user/cloudera/exercise_10/products \
 --outdir /home/cloudera/outdir \
 --bindir /home/cloudera/bindir \
---num-mappers 1
+--num-mappers 8
 
 hdfs dfs -ls /user/cloudera/exercise_10/products
 */

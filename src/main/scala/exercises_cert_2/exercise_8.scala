@@ -73,32 +73,32 @@ object exercise_8 {
 		// save the result as avro-file using snappy compression at /user/cloudera/exercise_8/avro-snappy
 		import com.databricks.spark.avro._
 		spark.sqlContext.setConf("spark.sql.avro.compression.codec", "snappy")
-		resultSql.repartition(1).write.avro("/user/cloudera/exercise_8/avro-snappy")
+		resultSql.write.avro("/user/cloudera/exercise_8/avro-snappy")
 
     // save the result as parquet-file using snappy compression at /user/cloudera/exercise_8/parquet-snappy
     spark.sqlContext.setConf("spark.sql.parquet.compression.codec","snappy")
-    resultSql.repartition(1).write.parquet("/user/cloudera/exercise_8/parquet-snappy")
+    resultSql.write.parquet("/user/cloudera/exercise_8/parquet-snappy")
 
     // save the result as json-file using bzip2 compression at /user/cloudera/exercise_8/json-bzip
-    resultSql.repartition(1).toJSON.rdd.saveAsTextFile("/user/cloudera/exercise_8/json-bzip",classOf[org.apache.hadoop.io.compress.BZip2Codec])
+    resultSql.toJSON.rdd.saveAsTextFile("/user/cloudera/exercise_8/json-bzip",classOf[org.apache.hadoop.io.compress.BZip2Codec])
 
     // save the result as sequence file without compression at /user/cloudera/exercise_8/sequence
-    resultSql.repartition(1).rdd.map(r => (r(0).toString,r.mkString(","))).saveAsSequenceFile("/user/cloudera/exercise_8/sequence")
+    resultSql.rdd.map(r => (r(0).toString,r.mkString(","))).saveAsSequenceFile("/user/cloudera/exercise_8/sequence")
 
     // save the result as orc file without compression at /user/cloudera/exercise_8/orc
-    resultSql.repartition(1).write.orc("/user/cloudera/exercise_8/orc")
+    resultSql.write.orc("/user/cloudera/exercise_8/orc")
 
     // save sales.txt and the result as jdbc tables (t_sales, t_sales_cost) in database mysql:hadoopexam
     val props = new java.util.Properties()
     props.setProperty("user", "root")
     props.setProperty("password", "cloudera")
-    salesDF.repartition(1).write.jdbc("jdbc:mysql://quickstart:3306/hadoopexam","t_sales",props)
-    resultSql.repartition(1).write.jdbc("jdbc:mysql://quickstart:3306/hadoopexam","t_sales_cost",props)
+    salesDF.write.jdbc("jdbc:mysql://quickstart:3306/hadoopexam","t_sales",props)
+    resultSql.write.jdbc("jdbc:mysql://quickstart:3306/hadoopexam","t_sales_cost",props)
 
     // save sales.txt and the result as hive tables in parquet-snappy format in database hadoopexam
     spark.sqlContext.setConf("spark.sql.parquet.compression.codec","snappy")
-    salesDF.repartition(1).write.parquet("/user/hive/warehouse/hadoopexam.db/t_sales")
-    resultSql.repartition(1).write.parquet("/user/hive/warehouse/hadoopexam.db/t_sales_cost")
+    salesDF.write.parquet("/user/hive/warehouse/hadoopexam.db/t_sales")
+    resultSql.write.parquet("/user/hive/warehouse/hadoopexam.db/t_sales_cost")
     spark.sqlContext.sql("""use hadoopexam""")
     spark.sqlContext.sql("""CREATE TABLE t_sales(department string, designation string, costToCompany int, state string) STORED AS PARQUET LOCATION "/user/hive/warehouse/hadoopexam.db/t_sales" TBLPROPERTIES("parquet.compression"="snappy") """)
     spark.sqlContext.sql("""CREATE TABLE  t_sales_cost(department string,designation string,state string,empCount bigint,totalCost bigint,avgCost double) STORED AS PARQUET LOCATION "/user/hive/warehouse/hadoopexam.db/t_sales_cost" TBLPROPERTIES("parquet.compression"="snappy") """)
