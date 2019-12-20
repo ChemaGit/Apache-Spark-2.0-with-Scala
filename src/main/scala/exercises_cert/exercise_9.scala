@@ -44,7 +44,7 @@ object exercise_9 {
     val flatData = data.flatMap(line => line.split("\\W"))
     val filtered = flatData.filter(w => !filter.contains(w))
     val count = filtered.map(w => (w, 1)).reduceByKey( (v, v1) => v + v1).sortBy(t => t._2, false)
-    count.repartition(1).saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercise_9", classOf[org.apache.hadoop.io.compress.GzipCodec])
+    count.saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercise_9", classOf[org.apache.hadoop.io.compress.GzipCodec])
 
     sc.stop()
     spark.stop()
