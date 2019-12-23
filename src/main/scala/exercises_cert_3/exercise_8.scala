@@ -41,7 +41,7 @@ object exercise_8 {
     spark.sqlContext.sql("""SELECT date_format(current_date,'dd/MM/yyyy') AS date, first_name, last_name, concat(first_name,",",last_name) FROM employee""").show()
 
     val result = spark.sqlContext.sql("""SELECT date_format(current_date,'dd/MM/yyyy') AS date, first_name, last_name, concat(first_name,",",last_name) FROM employee""")
-    result.toJSON.repartition(1).rdd.saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/question_57")
+    result.toJSON.rdd.saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/question_57")
 
     /**
       * Check the results

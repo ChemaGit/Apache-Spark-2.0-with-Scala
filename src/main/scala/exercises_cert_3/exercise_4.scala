@@ -37,7 +37,7 @@ object exercise_4 {
 
     content.collect.foreach(r => println(r.mkString("")))
 
-    content.repartition(1).saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercise_4")
+    content.saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercise_4")
 
     // check the results
     // hdfs dfs -ls /user/cloudera/exercise_4

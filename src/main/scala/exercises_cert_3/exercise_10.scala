@@ -96,7 +96,7 @@ object exercise_10 {
 
     val result = spark.sqlContext.sql("""SELECT idMan, name, salary, managerName FROM employee JOIN manager ON(idEmp = idMan) JOIN salary ON(idEmp = idSal) ORDER BY idMan""")
 
-    result.rdd.map(r => r.mkString(",")).repartition(1).saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercise_10/output")
+    result.rdd.map(r => r.mkString(",")).saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercise_10/output")
 
     /**
       * Check the results

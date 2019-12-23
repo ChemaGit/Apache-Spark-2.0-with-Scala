@@ -43,7 +43,7 @@ object exercise_2 {
     // spark.sqlContext.sql("""show tables""").show()
     // read the file and create a table employee2 whit Spark
     val employee = spark.sqlContext.read.json("hdfs://quickstart.cloudera/user/cloudera/files/employee.json")
-    employee.repartition(1)
+    employee
       .rdd
       .map(r => r.mkString(","))
         .saveAsTextFile("hdfs://quickstart.cloudera/user/hive/warehouse/hadoopexam.db/t_employee2")
