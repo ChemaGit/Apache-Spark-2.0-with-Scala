@@ -56,7 +56,6 @@ object exercise_7 {
         .sortBy(t => t._2, false)
 
     content
-        .repartition(1)
         .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercises/question_71")
 
     /**

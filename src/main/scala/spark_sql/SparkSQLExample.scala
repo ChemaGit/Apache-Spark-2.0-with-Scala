@@ -22,7 +22,6 @@ object SparkSQLExample {
 		val sc = spark.sparkContext
 		sc.setLogLevel("ERROR")
 
-		import spark.implicits._
 
 		val data = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/files/amigos.csv")
 

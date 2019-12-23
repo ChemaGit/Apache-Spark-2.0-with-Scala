@@ -40,9 +40,7 @@ object exercise_3 {
         .map(r => (r(0), r(1)))
         .sortBy(t => t._2)
 
-    emp
-        .repartition(1)
-        .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercises/question_78/")
+    emp.saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercises/question_78/")
 
     /**
       * $ hdfs dfs -ls /user/cloudera/exercises/question_78/

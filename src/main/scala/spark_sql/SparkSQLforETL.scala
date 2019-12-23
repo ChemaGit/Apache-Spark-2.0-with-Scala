@@ -16,7 +16,7 @@ $ sqoop import \
 --as-parquetfile \
 --outdir /home/cloudera/outdir \
 --bindir /home/cloudera/bindir \
---num-mappers 1
+--num-mappers 8
 
 $ parquet-tools cat hdfs://quickstart.cloudera/user/cloudera/loudacre/data/webpage/6aef3171-24b3-4d60-9e21-f93051bcd0bc.parquet
 */

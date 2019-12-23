@@ -49,7 +49,6 @@ object exercise_3 {
       .show()
 
     employee
-      .repartition(1)
       .write
       .orc("hdfs://quickstart.cloudera/user/cloudera/exercise_3/orc")
 
@@ -58,7 +57,6 @@ object exercise_3 {
         .setConf("spark.sql.parquet.compression.codec","snappy")
 
     employee
-        .repartition(1)
         .write
         .parquet("hdfs://quickstart.cloudera/user/cloudera/parquet-snappy")
 

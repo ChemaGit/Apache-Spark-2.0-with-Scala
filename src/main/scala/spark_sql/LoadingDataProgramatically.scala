@@ -24,8 +24,7 @@ object LoadingDataProgramatically {
 		empDF.createOrReplaceTempView("emp")
 		val empSalary = spark.sql("SELECT first_name, last_name, LENGTH(CONCAT(first_name,last_name)) * 10000 AS salary FROM emp")
 		empSalary.show()
-		empSalary.toJSON.rdd.repartition(1).saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/emp_json")
-
+		empSalary.toJSON.rdd.saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/emp_json")
 
 		sc.stop
 		spark.stop

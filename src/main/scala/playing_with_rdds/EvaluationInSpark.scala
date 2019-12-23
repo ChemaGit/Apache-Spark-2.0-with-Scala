@@ -47,7 +47,11 @@ object EvaluationInSpark {
      * logsWithErrors for faster access in future operations if we would like to reuse it.
      */
     val lastYearsLogs = sc.textFile("hdfs://quickstart.cloudera/user/loudacre/weblogs/", 8) //RDD[String]
-    val logsWithErrors = lastYearsLogs.filter(_.contains("error")).persist()
+
+    val logsWithErrors = lastYearsLogs
+      .filter(_.contains("error"))
+      .persist()
+
     val firstLogsWithErrors = logsWithErrors.take(10)
     val numErrors = logsWithErrors.count() //Now, computing the count on logsWithErrors is much faster.
     /**

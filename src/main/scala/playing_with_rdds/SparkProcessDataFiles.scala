@@ -29,7 +29,7 @@ object SparkProcessDataFiles {
 		val fRdd = rdd.flatMap(pair => getActivations(pair._2))
 		val format = fRdd.map(xml => "%s-%s".format(getAccount(xml), getModel(xml)))
 		//format.collect.foreach(println)		
-		format.repartition(1).saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/loudacre/results/account-models")
+		format.saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/loudacre/results/account-models")
 
 		sc.stop()
 		spark.stop()

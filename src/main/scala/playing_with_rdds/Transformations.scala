@@ -1,7 +1,5 @@
 package playing_with_rdds
 
-import org.apache.spark.SparkConf
-import org.apache.spark.SparkContext
 import org.apache.spark.sql.SparkSession
 
 object Transformations {

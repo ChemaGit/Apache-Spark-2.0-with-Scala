@@ -70,7 +70,6 @@ object exercise_9 {
     result.show()
 
     result
-      .repartition(1)
       .rdd
       .map(r => "%s,%s,%s,%s".format(r(0).toString,r(1).toString,r(2).toString,r(3).toString))
       .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercises/question_74")

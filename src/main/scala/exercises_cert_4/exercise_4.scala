@@ -46,7 +46,7 @@ object exercise_4 {
     bigrams.collect.foreach(println)
     val bigramsCount = bigrams.reduceByKey( (v,c) => v + c).sortBy(t => t._2, false)
     bigramsCount.collect.foreach(println)
-    bigramsCount.repartition(1).saveAsTextFile("/user/cloudera/bigrams/result")
+    bigramsCount.saveAsTextFile("/user/cloudera/bigrams/result")
 
     /**
       * check the results
