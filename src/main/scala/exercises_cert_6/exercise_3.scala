@@ -1,6 +1,7 @@
 package exercises_cert_6
 
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions._
 
 /**
 Problem 1:
@@ -86,13 +87,11 @@ object exercise_3 {
         .sqlContext
         .read
         .avro("hdfs://quickstart.cloudera/user/cloudera/problem1/orders/")
-    ordersDF.show(10)
 
     val orderItemsDF = spark
         .sqlContext
         .read
         .avro("hdfs://quickstart.cloudera/user/cloudera/problem1/order-items/")
-    orderItemsDF.show(10)
 
     import spark.implicits._
 
@@ -104,12 +103,48 @@ object exercise_3 {
         .join(orderItemsDF,$"order_id" === $"order_item_order_id", "inner")
         .persist()
 
-    joined.show(5)
-
     val resultDF = joined
-        .groupBy()
+        .groupBy(col("order_date"),col("order_status"))
+        .agg(countDistinct("order_id").as("total_orders"),round(sum("order_item_subtotal"),2).as("total_amount"))
+        .selectExpr("""from_unixtime(order_date / 1000,"yyyy-MM-dd") as order_date""", """order_status""", """total_orders""", """total_amount""")
+        .orderBy(col("order_date").desc, col("order_status").asc,col("total_amount").desc,col("total_orders").asc)
+
     //  b). Using Spark SQL  - here order_date should be YYYY-MM-DD format
+    joined.createOrReplaceTempView("joined")
+    val resultSQL = spark
+        .sqlContext
+        .sql("""SELECT from_unixtime(order_date / 1000, "yyyy-MM-dd") AS order_date, order_status, COUNT(DISTINCT(order_id)) AS total_orders, ROUND(SUM(order_item_subtotal),2) AS total_amount FROM joined GROUP BY order_date, order_status ORDER BY order_date DESC,order_status ASC,total_amount DESC,total_orders ASC""")
+
     //  c). By using combineByKey function on RDDS -- No need of formatting order_date or total_amount
+    val resultRDD = joined
+        .rdd
+        .map(r => ( (r(1).toString.toLong, r(3).toString), (r(0).toString.toInt, r(8).toString.toDouble)))
+        .combineByKey( ( (v:(Int,Double)) => (Set(v._1), v._2) ), ( (c:(Set[Int],Double),v:(Int,Double)) => (c._1 + v._1,c._2 + v._2)), ( (c:(Set[Int],Double),v:(Set[Int],Double)) => ( c._1 ++ v._1, c._2 + v._2)))
+        .map({ case(((d, s), (to, ta))) => (d,s,to.size,ta)})
+        .toDF("order_date","order_status","total_orders","total_amount")
+        .selectExpr("""from_unixtime(order_date / 1000,"yyyy-MM-dd") as order_date""", """order_status""", """total_orders""", """ROUND(total_amount,2) AS total_amount""")
+        .orderBy(col("order_date").desc, col("order_status").asc,col("total_amount").desc,col("total_orders").asc)
+
+    // 5.Store the result as parquet file into hdfs using gzip compression under folder
+    spark.sqlContext.setConf("spark.sql.parquet.compression.codec","gzip")
+    // /user/cloudera/problem1/result4a-gzip
+    resultDF.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4a-gzip")
+    // /user/cloudera/problem1/result4b-gzip
+    resultSQL.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4b-gzip")
+    // /user/cloudera/problem1/result4c-gzip
+    resultRDD.write.parquet("hdfs://quickstart.cloudera/user/cloudera/result4c-gzip")
+
+    // 6.Store the result as parquet file into hdfs using snappy compression under folder
+    // /user/cloudera/problem1/result4a-snappy
+    // /user/cloudera/problem1/result4b-snappy
+    // /user/cloudera/problem1/result4c-snappy
+
+    // 7.Store the result as CSV file into hdfs using No compression under folder
+    // /user/cloudera/problem1/result4a-csv
+    // /user/cloudera/problem1/result4b-csv
+    // /user/cloudera/problem1/result4c-csv
+
+    // 8.create a mysql table named result and load data from /user/cloudera/problem1/result4a-csv to mysql table named result
 
     sc.stop()
     spark.stop()
