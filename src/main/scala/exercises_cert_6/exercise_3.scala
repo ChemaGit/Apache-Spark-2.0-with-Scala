@@ -135,17 +135,52 @@ object exercise_3 {
     resultRDD.write.parquet("hdfs://quickstart.cloudera/user/cloudera/result4c-gzip")
 
     // 6.Store the result as parquet file into hdfs using snappy compression under folder
+    spark
+        .sqlContext
+        .setConf("spark.sql.parquet.compression.codec","snappy")
     // /user/cloudera/problem1/result4a-snappy
+    resultDF.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4a-snappy")
     // /user/cloudera/problem1/result4b-snappy
+    resultSQL.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4b-snappy")
     // /user/cloudera/problem1/result4c-snappy
+    resultRDD.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4c-snappy")
 
     // 7.Store the result as CSV file into hdfs using No compression under folder
     // /user/cloudera/problem1/result4a-csv
+    resultDF
+        .rdd
+        .map(r => r.mkString(","))
+        .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem1/result4a-csv")
     // /user/cloudera/problem1/result4b-csv
+    resultSQL
+        .rdd
+        .map(r => r.mkString(","))
+        .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem1/result4b-csv")
     // /user/cloudera/problem1/result4c-csv
+    resultRDD
+      .rdd
+      .map(r => r.mkString(","))
+      .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem1/result4c-csv")
 
     // 8.create a mysql table named result and load data from /user/cloudera/problem1/result4a-csv to mysql table named result
+    /*
+      mysql -u root -p cloudera
+      use retail_export
+      CREATE TABLE result(order_date varchar(16),order_status varchar(16),total_orders int,total_amount double);
 
+      sqoop export \
+      --connect jdbc:mysql://quickstart.cloudera:3306/retail_export \
+      --username root \
+      --password cloudera \
+      --table result \
+      --export-dir /user/cloudera/problem1/result4a-csv \
+      --input-fields-terminated-by ',' \
+      --input-lines-terminated-by '\n' \
+      --outdir /home/cloudera/outdir \
+      --bindir /home/cloudera/bindir
+
+      SELECT * FROM result LIMIT 10;
+     */
     sc.stop()
     spark.stop()
   }
