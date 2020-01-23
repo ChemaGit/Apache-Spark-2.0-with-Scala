@@ -132,7 +132,7 @@ object exercise_3 {
     // /user/cloudera/problem1/result4b-gzip
     resultSQL.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4b-gzip")
     // /user/cloudera/problem1/result4c-gzip
-    resultRDD.write.parquet("hdfs://quickstart.cloudera/user/cloudera/result4c-gzip")
+    resultRDD.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4c-gzip")
 
     // 6.Store the result as parquet file into hdfs using snappy compression under folder
     spark
