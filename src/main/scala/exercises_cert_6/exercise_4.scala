@@ -64,62 +64,69 @@ object exercise_4 {
   case class Products(product_id: Int, product_name: String)
 
   def main(args: Array[String]): Unit = {
-    sc.setLogLevel("ERROR")
+    try {
+      sc.setLogLevel("ERROR")
 
-    import spark.implicits._
+      import spark.implicits._
 
-    val bList = sc.broadcast(List("COMPLETE", "CLOSED"))
+      val bList = sc.broadcast(List("COMPLETE", "CLOSED"))
 
-    val ordersDF = sc
-      .textFile("hdfs://quickstart.cloudera/public/retail_db/orders")
-      .map(line => line.split(","))
-      .filter(r => bList.value.contains(r(3)))
-      .map(arr => Orders(arr(0).toInt,arr(1).substring(0,10)))
-      .toDF()
-      .persist()
+      val ordersDF = sc
+        .textFile("hdfs://quickstart.cloudera/public/retail_db/orders")
+        .map(line => line.split(","))
+        .filter(r => bList.value.contains(r(3)))
+        .map(arr => Orders(arr(0).toInt, arr(1).substring(0, 10)))
+        .toDF()
+        .persist()
 
-    val orderItemsDF = sc
-      .textFile("hdfs://quickstart.cloudera/public/retail_db/order_items")
-      .map(line => line.split(","))
-      .map(arr => OrderItems(arr(1).toInt, arr(2).toInt, arr(4).toDouble))
-      .toDF()
-      .persist()
+      val orderItemsDF = sc
+        .textFile("hdfs://quickstart.cloudera/public/retail_db/order_items")
+        .map(line => line.split(","))
+        .map(arr => OrderItems(arr(1).toInt, arr(2).toInt, arr(4).toDouble))
+        .toDF()
+        .persist()
 
-    val productsDF = sc
-      .textFile("hdfs://quickstart.cloudera/public/retail_db/products")
-      .map(line => line.split(","))
-      .map(arr => Products(arr(0).toInt,arr(2)))
-      .toDF()
-      .persist()
+      val productsDF = sc
+        .textFile("hdfs://quickstart.cloudera/public/retail_db/products")
+        .map(line => line.split(","))
+        .map(arr => Products(arr(0).toInt, arr(2)))
+        .toDF()
+        .persist()
 
-    ordersDF.createOrReplaceTempView("orders")
-    orderItemsDF.createOrReplaceTempView("order_items")
-    productsDF.createOrReplaceTempView("products")
+      ordersDF.createOrReplaceTempView("orders")
+      orderItemsDF.createOrReplaceTempView("order_items")
+      productsDF.createOrReplaceTempView("products")
 
-    val result = spark
+      val result = spark
         .sqlContext
         .sql(
           """SELECT product_id, product_name,order_date,ROUND(SUM(order_item_subtotal),2) AS daily_revenue FROM orders JOIN order_items ON(order_id = order_item_order_id)
             | JOIN products ON(order_item_product_id = product_id) GROUP BY product_id,product_name,order_date ORDER BY order_date ASC,daily_revenue DESC """.stripMargin)
 
-    // result.show(10)
+      // result.show(10)
 
-    /*Final output need to be stored under
+      /*Final output need to be stored under
       HDFS location-avro format /user/cloudera/question97/daily_revenue_avro
       HDFS location-text format /user/cloudera/question97/daily_revenue_txt
      */
 
-    import com.databricks.spark.avro._
-    result
+      import com.databricks.spark.avro._
+      result
         .write
         .avro("hdfs://quickstart.cloudera/user/cloudera/question97/daily_revenue_avro")
 
-    result
+      result
         .rdd
         .map(r => r.mkString(","))
         .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/question97/daily_revenue_txt")
 
-    sc.stop()
-    spark.stop()
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("Stopped SparkContext")
+      spark.stop()
+      println("Stopped SparkSession")
+    }
   }
 }
