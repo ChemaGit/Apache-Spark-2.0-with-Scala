@@ -78,92 +78,93 @@ object exercise_3 {
   lazy val sc = spark.sparkContext
 
   def main(args: Array[String]): Unit = {
-    sc.setLogLevel("ERROR")
+    try {
+      sc.setLogLevel("ERROR")
 
-    // 3.Using Spark Scala load data at /user/cloudera/problem1/orders and /user/cloudera/problem1/orders-items items as dataframes.
-    import com.databricks.spark.avro._
+      // 3.Using Spark Scala load data at /user/cloudera/problem1/orders and /user/cloudera/problem1/orders-items items as dataframes.
+      import com.databricks.spark.avro._
 
-    val ordersDF = spark
+      val ordersDF = spark
         .sqlContext
         .read
         .avro("hdfs://quickstart.cloudera/user/cloudera/problem1/orders/")
 
-    val orderItemsDF = spark
+      val orderItemsDF = spark
         .sqlContext
         .read
         .avro("hdfs://quickstart.cloudera/user/cloudera/problem1/order-items/")
 
-    import spark.implicits._
+      import spark.implicits._
 
-    // 4.Expected Intermediate Result: Order_Date , Order_status, total_orders, total_amount. In plain english, please find total orders and total amount per status per day.
-    //  The result should be sorted by order date in descending, order status in ascending and total amount in descending and total orders in ascending.
-    // Aggregation should be done using below methods. However, sorting can be done using a dataframe or RDD. Perform aggregation in each of the following ways
-    //  a). Just by using Data Frames API - here order_date should be YYYY-MM-DD format
-    val joined = ordersDF
-        .join(orderItemsDF,$"order_id" === $"order_item_order_id", "inner")
+      // 4.Expected Intermediate Result: Order_Date , Order_status, total_orders, total_amount. In plain english, please find total orders and total amount per status per day.
+      //  The result should be sorted by order date in descending, order status in ascending and total amount in descending and total orders in ascending.
+      // Aggregation should be done using below methods. However, sorting can be done using a dataframe or RDD. Perform aggregation in each of the following ways
+      //  a). Just by using Data Frames API - here order_date should be YYYY-MM-DD format
+      val joined = ordersDF
+        .join(orderItemsDF, $"order_id" === $"order_item_order_id", "inner")
         .persist()
 
-    val resultDF = joined
-        .groupBy(col("order_date"),col("order_status"))
-        .agg(countDistinct("order_id").as("total_orders"),round(sum("order_item_subtotal"),2).as("total_amount"))
+      val resultDF = joined
+        .groupBy(col("order_date"), col("order_status"))
+        .agg(countDistinct("order_id").as("total_orders"), round(sum("order_item_subtotal"), 2).as("total_amount"))
         .selectExpr("""from_unixtime(order_date / 1000,"yyyy-MM-dd") as order_date""", """order_status""", """total_orders""", """total_amount""")
-        .orderBy(col("order_date").desc, col("order_status").asc,col("total_amount").desc,col("total_orders").asc)
+        .orderBy(col("order_date").desc, col("order_status").asc, col("total_amount").desc, col("total_orders").asc)
 
-    //  b). Using Spark SQL  - here order_date should be YYYY-MM-DD format
-    joined.createOrReplaceTempView("joined")
-    val resultSQL = spark
+      //  b). Using Spark SQL  - here order_date should be YYYY-MM-DD format
+      joined.createOrReplaceTempView("joined")
+      val resultSQL = spark
         .sqlContext
         .sql("""SELECT from_unixtime(order_date / 1000, "yyyy-MM-dd") AS order_date, order_status, COUNT(DISTINCT(order_id)) AS total_orders, ROUND(SUM(order_item_subtotal),2) AS total_amount FROM joined GROUP BY order_date, order_status ORDER BY order_date DESC,order_status ASC,total_amount DESC,total_orders ASC""")
 
-    //  c). By using combineByKey function on RDDS -- No need of formatting order_date or total_amount
-    val resultRDD = joined
+      //  c). By using combineByKey function on RDDS -- No need of formatting order_date or total_amount
+      val resultRDD = joined
         .rdd
-        .map(r => ( (r(1).toString.toLong, r(3).toString), (r(0).toString.toInt, r(8).toString.toDouble)))
-        .combineByKey( ( (v:(Int,Double)) => (Set(v._1), v._2) ), ( (c:(Set[Int],Double),v:(Int,Double)) => (c._1 + v._1,c._2 + v._2)), ( (c:(Set[Int],Double),v:(Set[Int],Double)) => ( c._1 ++ v._1, c._2 + v._2)))
-        .map({ case(((d, s), (to, ta))) => (d,s,to.size,ta)})
-        .toDF("order_date","order_status","total_orders","total_amount")
+        .map(r => ((r(1).toString.toLong, r(3).toString), (r(0).toString.toInt, r(8).toString.toDouble)))
+        .combineByKey(((v: (Int, Double)) => (Set(v._1), v._2)), ((c: (Set[Int], Double), v: (Int, Double)) => (c._1 + v._1, c._2 + v._2)), ((c: (Set[Int], Double), v: (Set[Int], Double)) => (c._1 ++ v._1, c._2 + v._2)))
+        .map({ case (((d, s), (to, ta))) => (d, s, to.size, ta) })
+        .toDF("order_date", "order_status", "total_orders", "total_amount")
         .selectExpr("""from_unixtime(order_date / 1000,"yyyy-MM-dd") as order_date""", """order_status""", """total_orders""", """ROUND(total_amount,2) AS total_amount""")
-        .orderBy(col("order_date").desc, col("order_status").asc,col("total_amount").desc,col("total_orders").asc)
+        .orderBy(col("order_date").desc, col("order_status").asc, col("total_amount").desc, col("total_orders").asc)
 
-    // 5.Store the result as parquet file into hdfs using gzip compression under folder
-    spark.sqlContext.setConf("spark.sql.parquet.compression.codec","gzip")
-    // /user/cloudera/problem1/result4a-gzip
-    resultDF.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4a-gzip")
-    // /user/cloudera/problem1/result4b-gzip
-    resultSQL.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4b-gzip")
-    // /user/cloudera/problem1/result4c-gzip
-    resultRDD.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4c-gzip")
+      // 5.Store the result as parquet file into hdfs using gzip compression under folder
+      spark.sqlContext.setConf("spark.sql.parquet.compression.codec", "gzip")
+      // /user/cloudera/problem1/result4a-gzip
+      resultDF.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4a-gzip")
+      // /user/cloudera/problem1/result4b-gzip
+      resultSQL.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4b-gzip")
+      // /user/cloudera/problem1/result4c-gzip
+      resultRDD.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4c-gzip")
 
-    // 6.Store the result as parquet file into hdfs using snappy compression under folder
-    spark
+      // 6.Store the result as parquet file into hdfs using snappy compression under folder
+      spark
         .sqlContext
-        .setConf("spark.sql.parquet.compression.codec","snappy")
-    // /user/cloudera/problem1/result4a-snappy
-    resultDF.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4a-snappy")
-    // /user/cloudera/problem1/result4b-snappy
-    resultSQL.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4b-snappy")
-    // /user/cloudera/problem1/result4c-snappy
-    resultRDD.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4c-snappy")
+        .setConf("spark.sql.parquet.compression.codec", "snappy")
+      // /user/cloudera/problem1/result4a-snappy
+      resultDF.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4a-snappy")
+      // /user/cloudera/problem1/result4b-snappy
+      resultSQL.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4b-snappy")
+      // /user/cloudera/problem1/result4c-snappy
+      resultRDD.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4c-snappy")
 
-    // 7.Store the result as CSV file into hdfs using No compression under folder
-    // /user/cloudera/problem1/result4a-csv
-    resultDF
+      // 7.Store the result as CSV file into hdfs using No compression under folder
+      // /user/cloudera/problem1/result4a-csv
+      resultDF
         .rdd
         .map(r => r.mkString(","))
         .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem1/result4a-csv")
-    // /user/cloudera/problem1/result4b-csv
-    resultSQL
+      // /user/cloudera/problem1/result4b-csv
+      resultSQL
         .rdd
         .map(r => r.mkString(","))
         .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem1/result4b-csv")
-    // /user/cloudera/problem1/result4c-csv
-    resultRDD
-      .rdd
-      .map(r => r.mkString(","))
-      .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem1/result4c-csv")
+      // /user/cloudera/problem1/result4c-csv
+      resultRDD
+        .rdd
+        .map(r => r.mkString(","))
+        .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem1/result4c-csv")
 
-    // 8.create a mysql table named result and load data from /user/cloudera/problem1/result4a-csv to mysql table named result
-    /*
+      // 8.create a mysql table named result and load data from /user/cloudera/problem1/result4a-csv to mysql table named result
+      /* Using Sqoop
       mysql -u root -p cloudera
       use retail_export
       CREATE TABLE result(order_date varchar(16),order_status varchar(16),total_orders int,total_amount double);
@@ -181,8 +182,72 @@ object exercise_3 {
 
       SELECT * FROM result LIMIT 10;
      */
-    sc.stop()
-    spark.stop()
+
+      // 9.create a mysql table named result_jdbc and load data from dataframe resultSQL
+      /*mysql -u root -p cloudera
+        use retail_export
+        CREATE TABLE result_jdbc(order_date varchar(16),order_status varchar(16),total_orders int,total_amount double);*/
+      val props = new java.util.Properties()
+      props.setProperty("user", "root")
+      props.setProperty("password", "cloudera")
+      resultSQL
+        .repartition(1)
+          .write
+          .jdbc("jdbc:mysql://quicstart.cloudera:3306/retail_export", "result_jdbc", props)
+      // mysql> SELECT * FROM result_jdbc LIMIT 10;
+
+      // // 10.create a table in HIVE named result_hive and load data from /user/cloudera/problem1/result4a-snappy
+      /*
+      $ hive
+      hive> use hadoopexam;
+      hive> hive> CREATE TABLE result_hive(order_date string,order_status string,total_orders bigint,total_amount double) STORED AS PARQUET LOCATION '/user/cloudera/problem1/result4a-snappy' TBLPROPERTIES("parquet.compression"="snappy");
+      hive> select * from result_hive limit 10;
+       */
+
+
+      // To have the opportunity to view the web console of Spark: http://localhost:4041/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("Stopped SparkContext")
+      spark.stop()
+      println("Stopped SparkSession")
+    }
   }
+
+  // 11.check the results
+//  $ hdfs dfs -ls /user/cloudera/problem1/result4a-gzip
+//  $ parquet-tools meta hdfs://quickstart.cloudera/user/cloudera/problem1/result4a-gzip/part-r-00000-f9a543d3-45a8-4b82-9a25-572e242c9b77.gz.parquet
+//  $ parquet-tools cat hdfs://quickstart.cloudera/user/cloudera/problem1/result4a-gzip/part-r-00000-f9a543d3-45a8-4b82-9a25-572e242c9b77.gz.parquet
+//
+//  $ hdfs dfs -ls /user/cloudera/problem1/result4b-gzip
+//  $ parquet-tools meta hdfs://quickstart.cloudera/user/cloudera/problem1/result4b-gzip/part-r-00000-4576f39e-986e-4288-bef8-04d7e7f4de0f.gz.parquet
+//  $ parquet-tools cat hdfs://quickstart.cloudera/user/cloudera/problem1/result4b-gzip/part-r-00000-4576f39e-986e-4288-bef8-04d7e7f4de0f.gz.parquet
+//
+//  $ hdfs dfs -ls /user/cloudera/problem1/result4c-gzip
+//  $ parquet-tools meta hdfs://quickstart.cloudera/user/cloudera/problem1/result4c-gzip/part-r-00000-e02e07dd-29ee-4f95-b7a2-42304fc2e3bf.gz.parquet
+//  $ parquet-tools cat hdfs://quickstart.cloudera/user/cloudera/problem1/result4c-gzip/part-r-00000-e02e07dd-29ee-4f95-b7a2-42304fc2e3bf.gz.parquet
+//
+//  $ hdfs dfs -ls /user/cloudera/problem1/result4a-snappy
+//  $ parquet-tools meta hdfs://quickstart.cloudera/user/cloudera/problem1/result4a-snappy/part-r-00000-195923be-6ba4-409d-a360-efece6dd3b14.snappy.parquet
+//  $ parquet-tools cat hdfs://quickstart.cloudera/user/cloudera/problem1/result4a-snappy/part-r-00000-195923be-6ba4-409d-a360-efece6dd3b14.snappy.parquet
+//
+//  $ hdfs dfs -ls /user/cloudera/problem1/result4b-snappy
+//  $ parquet-tools meta hdfs://quickstart.cloudera/user/cloudera/problem1/result4b-snappy/part-r-00000-c4854798-bd0d-4f11-ade8-e33a269e2933.snappy.parquet
+//  $ parquet-tools cat hdfs://quickstart.cloudera/user/cloudera/problem1/result4b-snappy/part-r-00000-c4854798-bd0d-4f11-ade8-e33a269e2933.snappy.parquet
+//
+//  $ hdfs dfs -ls /user/cloudera/problem1/result4c-snappy
+//  $ parquet-tools meta hdfs://quickstart.cloudera/user/cloudera/problem1/result4c-snappy/part-r-00000-458400cc-8d04-4ba8-933b-84fefb9e5585.snappy.parquet
+//  $ parquet-tools cat hdfs://quickstart.cloudera/user/cloudera/problem1/result4c-snappy/part-r-00000-458400cc-8d04-4ba8-933b-84fefb9e5585.snappy.parquet
+//
+//  $ hdfs dfs -ls /user/cloudera/problem1/result4a-csv
+//  $ hdfs dfs -cat /user/cloudera/problem1/result4a-csv/part-00000 | head -n 10
+//
+//  $ hdfs dfs -ls /user/cloudera/problem1/result4b-csv
+//  $ hdfs dfs -cat /user/cloudera/problem1/result4b-csv/part-00000 | head -n 10
+//
+//  $ hdfs dfs -ls /user/cloudera/problem1/result4c-csv
+//  $ hdfs dfs -cat /user/cloudera/problem1/result4c-csv/part-00000 | head -n 10
 
 }
