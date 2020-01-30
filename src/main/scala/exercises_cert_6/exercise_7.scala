@@ -58,6 +58,8 @@ object exercise_7 {
     .builder()
     .appName("exercise 7")
     .master("local[*]")
+    .config("spark.sql.shuffle.partitions","4") // Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "SparkDataFrames")  // To silence Metrics warning.
     .getOrCreate()
 
   lazy val sc = spark.sparkContext
@@ -118,6 +120,7 @@ object exercise_7 {
           .orderBy(col("product_category_id"))
 
       //resultDF.show()
+      //resultDF.explain(true)
 
       // b) spark sql
       productsDF.createOrReplaceTempView("products")
@@ -130,6 +133,7 @@ object exercise_7 {
               |ROUND(AVG(product_price),2) AS avg_price,
               |MIN(product_price) AS min_price FROM products GROUP BY product_category_id ORDER BY product_category_id""".stripMargin)
       //resultSQL.show()
+      // resultSQL.explain(true)
 
       // c) RDDs aggregateByKey method.
       val productsRDD = products.map(r => (r(1).toInt,(r(4).toDouble, 1)))
@@ -143,6 +147,7 @@ object exercise_7 {
           .orderBy(col("product_category_id"))
 
       //resultRDD.show()
+      // resultRDD.explain(true)
 
       // *5. store the result in avro file using snappy compression under these folders respectively
       import com.databricks.spark.avro._
