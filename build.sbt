@@ -30,6 +30,8 @@ libraryDependencies += "org.apache.spark" %% "spark-mllib" % "2.2.0" //% "runtim
 
 // https://mvnrepository.com/artifact/com.databricks/spark-avro
 libraryDependencies += "com.databricks" %% "spark-avro" % "4.0.0"
+// https://mvnrepository.com/artifact/databricks/spark-csv
+libraryDependencies += "com.databricks" %% "spark-csv" % "1.5.0"
 libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.12"
 dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.9.5"
 dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.5"

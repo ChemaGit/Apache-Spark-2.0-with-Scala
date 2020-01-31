@@ -69,7 +69,7 @@ object exercise_8 {
     .appName("exercise 8")
     .master("local[*]")
     .config("spark.sql.shuffle.partitions","4") // Change to a more reasonable default number of partitions for our data
-    .config("spark.app.id", "SparkDataFrames")  // To silence Metrics warning.
+    .config("spark.app.id", "exercise_8")  // To silence Metrics warning.
     .getOrCreate()
 
   lazy val sc = spark.sparkContext
@@ -95,8 +95,24 @@ object exercise_8 {
           .write
           .parquet("hdfs://quickstart.cloudera//user/cloudera/problem5/parquet-snappy-compress")
       //   -save the data to hdfs using gzip compression as text file at /user/cloudera/problem5/text-gzip-compress
+      ordersAvro
+          .rdd
+          .map(r => r.mkString(","))
+          .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem5/text-gzip-compress", classOf[org.apache.hadoop.io.compress.GzipCodec])
       //   -save the data to hdfs using no compression as sequence file at /user/cloudera/problem5/sequence
+      ordersAvro
+          .rdd
+          .map(r => (r(0).toString, r.mkString(",")))
+          .saveAsSequenceFile("hdfs://quickstart.cloudera/user/cloudera/problem5/sequence")
       //   -save the data to hdfs using snappy compression as text file at /user/cloudera/problem5/text-snappy-compress
+      ordersAvro
+          .rdd
+          .map(r => r.mkString(","))
+          .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem5/text-snappy-compress", classOf[org.apache.hadoop.io.compress.SnappyCodec])
+
+      // 5. Transform/Convert data-files at /user/cloudera/problem5/parquet-snappy-compress and store the converted file at the following locations and file formats
+      //  -save the data to hdfs using no compression as parquet file at /user/cloudera/problem5/parquet-no-compress
+      //  -save the data to hdfs using snappy compression as avro file at /user/cloudera/problem5/avro-snappy
 
       // To have the opportunity to view the web console of Spark: http://localhost:4041/
       println("Type whatever to the console to exit......")

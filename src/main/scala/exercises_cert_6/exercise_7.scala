@@ -59,7 +59,7 @@ object exercise_7 {
     .appName("exercise 7")
     .master("local[*]")
     .config("spark.sql.shuffle.partitions","4") // Change to a more reasonable default number of partitions for our data
-    .config("spark.app.id", "SparkDataFrames")  // To silence Metrics warning.
+    .config("spark.app.id", "exercise_7")  // To silence Metrics warning.
     .getOrCreate()
 
   lazy val sc = spark.sparkContext
