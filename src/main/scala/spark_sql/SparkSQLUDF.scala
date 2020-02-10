@@ -21,6 +21,8 @@ object SparkSQLUDF {
 		spark.udf.register("myUpper",(input: String) => input.toUpperCase)
 		spark.catalog.listFunctions.filter('name like "%upper%").show(false)
 
+		spark.catalog.listFunctions.show(100,false)
+
 		sc.stop
 		spark.stop
 	}
