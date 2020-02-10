@@ -80,6 +80,8 @@ object exercise_8 {
     try {
       sc.setLogLevel("ERROR")
 
+      import spark.implicits._
+
       // 4. Transform/Convert data-files at /user/cloudera/problem5/avro and store the converted file at the following locations and file formats
       import com.databricks.spark.avro._
       val ordersAvro = spark
@@ -108,11 +110,71 @@ object exercise_8 {
       ordersAvro
           .rdd
           .map(r => r.mkString(","))
-          .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem5/text-snappy-compress", classOf[org.apache.hadoop.io.compress.SnappyCodec])
+//          .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem5/text-snappy-compress", classOf[org.apache.hadoop.io.compress.SnappyCodec])
 
       // 5. Transform/Convert data-files at /user/cloudera/problem5/parquet-snappy-compress and store the converted file at the following locations and file formats
+      val parquetSnappy = spark
+          .sqlContext
+          .read
+          .parquet("hdfs://quickstart.cloudera/user/cloudera/problem5/parquet-snappy-compress")
+          .cache()
       //  -save the data to hdfs using no compression as parquet file at /user/cloudera/problem5/parquet-no-compress
+      spark
+        .sqlContext
+        .setConf("spark.sql.parquet.compression.codec","uncompressed")
+
+      parquetSnappy
+          .write
+          .parquet("hdfs://quickstart.cloudera/user/cloudera/problem5/parquet-no-compress")
       //  -save the data to hdfs using snappy compression as avro file at /user/cloudera/problem5/avro-snappy
+      spark
+        .sqlContext
+        .setConf("spark.sql.avro.compression.codec","snappy")
+
+      parquetSnappy
+          .write
+          .avro("hdfs://quickstart.cloudera/user/cloudera/problem5/avro-snappy")
+
+      // 6. Transform/Convert data-files at /user/cloudera/problem5/avro-snappy and store the converted file at the following locations and file formats
+      val avroSnappy = spark
+          .sqlContext
+          .read
+          .avro("hdfs://quickstart.cloudera/user/cloudera/problem5/avro-snappy")
+          .cache()
+      //  -save the data to hdfs using no compression as json file at /user/cloudera/problem5/json-no-compress
+      avroSnappy
+          .toJSON
+          .rdd
+          .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem5/json-no-compress")
+      //  -save the data to hdfs using gzip compression as json file at /user/cloudera/problem5/json-gzip
+      avroSnappy
+        .toJSON
+        .rdd
+        .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem5/json-gzip",classOf[org.apache.hadoop.io.compress.GzipCodec])
+
+      // 7. Transform/Convert data-files at  /user/cloudera/problem5/json-gzip and store the converted file at the following locations and file formats
+      val jsonGzip = spark
+          .sqlContext
+          .read
+          .json("hdfs://quickstart.cloudera/user/cloudera/problem5/json-gzip")
+      //  -save the data to as comma separated text using gzip compression at   /user/cloudera/problem5/csv-gzip
+      jsonGzip
+          .rdd
+          .map(row => row.mkString(","))
+          .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem5/csv-gzip",classOf[org.apache.hadoop.io.compress.GzipCodec])
+          //.write
+          //.format("com.databricks.spark.csv")
+          //.save("hdfs://quickstart.cloudera/user/cloudera/problem5/csv-gzip")
+
+      // 8. Using spark access data at /user/cloudera/problem5/sequence and stored it back to hdfs using no compression as ORC file to HDFS to destination /user/cloudera/problem5/orc
+      sc
+          .sequenceFile("hdfs://quickstart.cloudera/user/cloudera/problem5/sequence",classOf[org.apache.hadoop.io.Text],classOf[org.apache.hadoop.io.Text])
+          .map(t => t._2.toString)
+          .map(line => line.split(","))
+          .map(r => (r(0), r(1), r(2), r(3)))
+          .toDF
+          .write
+          .orc("hdfs://quickstart.cloudera/user/cloudera/problem5/orc")
 
       // To have the opportunity to view the web console of Spark: http://localhost:4041/
       println("Type whatever to the console to exit......")
