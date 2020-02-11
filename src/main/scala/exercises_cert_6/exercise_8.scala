@@ -158,13 +158,16 @@ object exercise_8 {
           .read
           .json("hdfs://quickstart.cloudera/user/cloudera/problem5/json-gzip")
       //  -save the data to as comma separated text using gzip compression at   /user/cloudera/problem5/csv-gzip
+//      jsonGzip
+//          .rdd
+//          .map(row => row.mkString(","))
+//          .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem5/csv-gzip",classOf[org.apache.hadoop.io.compress.GzipCodec])
+
       jsonGzip
-          .rdd
-          .map(row => row.mkString(","))
-          .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem5/csv-gzip",classOf[org.apache.hadoop.io.compress.GzipCodec])
-          //.write
-          //.format("com.databricks.spark.csv")
-          //.save("hdfs://quickstart.cloudera/user/cloudera/problem5/csv-gzip")
+          .write
+          .format("com.databricks.spark.csv")
+          .option("compression","gzip")
+          .save("hdfs://quickstart.cloudera/user/cloudera/problem5/csv-gzip")
 
       // 8. Using spark access data at /user/cloudera/problem5/sequence and stored it back to hdfs using no compression as ORC file to HDFS to destination /user/cloudera/problem5/orc
       sc
