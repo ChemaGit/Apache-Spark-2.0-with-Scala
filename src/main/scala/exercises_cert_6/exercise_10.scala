@@ -64,6 +64,11 @@ object exercise_10 {
           .write
           .parquet(pathOut)
 
+      // to Check the outcome
+//      $ hdfs dfs -ls /user/cloudera/problem2/parquet-snappy
+//      $ parquet-tools meta hdfs://quickstart.cloudera/user/cloudera/problem2/parquet-snappy/part-r-00000-c98c1300-857d-40ea-bda4-92b24b7ea937.snappy.parquet
+//      $ parquet-tools head hdfs://quickstart.cloudera/user/cloudera/problem2/parquet-snappy/part-r-00000-c98c1300-857d-40ea-bda4-92b24b7ea937.snappy.parquet
+
       // To have the opportunity to view the web console of Spark: http://localhost:4041/
       println("Type whatever to the console to exit......")
       scala.io.StdIn.readLine()
