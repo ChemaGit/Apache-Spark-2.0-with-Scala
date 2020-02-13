@@ -53,7 +53,8 @@ object exercise_9 {
 
     try {
       // 2. On spark shell use data available on meta store as source and perform step 3,4,5 and 6. [this proves your ability to use meta store as a source]
-      sqlContext.sql("SHOW DATABASES")
+      sqlContext.sql("CREATE DATABASE problem6")
+      sqlContext.sql("SHOW DATABASES").show()
       sqlContext.sql("""USE problem6""")
       // 3. Rank products within department by price and order by department ascending and rank descending [this proves you can produce ranked and sorted data on joined data sets]
       val hiveResult = sqlContext
@@ -97,28 +98,30 @@ object exercise_9 {
           .cache()
 
       // 7. Store the result of 5 and 6 in new meta store tables within hive. [this proves your ability to use metastore as a sink]
+      val path1 = "hdfs://quickstart.cloudera/user/hive/warehouse/problem6.db/hive_result_3"
+      val path2 = "hdfs://quickstart.cloudera/user/hive/warehouse/problem6.db/hive_result_4"
       hiveResult3
         .write
-        .parquet("/user/hive/warehouse/problem6.db/hive_result_3")
+        .parquet(path1)
       hiveResult4
         .write
-        .parquet("/user/hive/warehouse/problem6.db/hive_result_4")
+        .parquet(path2)
 
       sqlContext
         .sql(
-          """CREATE TABLE hive_result_3(
+          s"""CREATE TABLE hive_result_3(Logger.getRootLogger.setLevel(Level.ERROR)
             |product_id INT,
             |product_name STRING,
             |product_price DOUBLE,
             |product_price_rank INT,
             |product_dense_rank INT)
             |STORED AS PARQUET
-            |LOCATION "/user/hive/warehouse/problem6.db/hive_result_3" """.stripMargin)
-      sqlContext.sql("""SELECT * FROM hive_result_3""").show()
+            |LOCATION "$path1" """.stripMargin)
+      sqlContext.sql("""SELECT * FROM hive_result_3""").show(10)
 
       sqlContext
         .sql(
-          """CREATE TABLE hive_result_4(
+          s"""CREATE TABLE hive_result_4(
             |product_id INT,
             |product_category_id INT,
             |product_name STRING,
@@ -126,8 +129,8 @@ object exercise_9 {
             |product_price DOUBLE,
             |product_image STRING)
             |STORED AS PARQUET
-            |LOCATION "/user/hive/warehouse/problem6.db/hive_result_4" """.stripMargin)
-      sqlContext.sql("""SELECT * FROM hive_result_4""").show()
+            |LOCATION "$path2" """.stripMargin)
+      sqlContext.sql("""SELECT * FROM hive_result_4""").show(10)
 
       /*
       $ beeline -u jdbc:hive2://quickstart.cloudera:10000/problem6
