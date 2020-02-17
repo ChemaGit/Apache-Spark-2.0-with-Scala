@@ -1,6 +1,5 @@
 package exercises_cert_7
 
-import com.sun.org.apache.xalan.internal.xsltc.compiler.util.IntType
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
