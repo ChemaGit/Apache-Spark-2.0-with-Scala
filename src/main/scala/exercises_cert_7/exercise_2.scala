@@ -54,7 +54,6 @@ object exercise_2 {
     Logger.getRootLogger.setLevel(Level.ERROR)
 
     try {
-      import spark.implicits._
 
       val customers = sqlContext
           .read
@@ -87,8 +86,9 @@ object exercise_2 {
       println("Type whatever to the console to exit......")
       scala.io.StdIn.readLine()
     } finally {
+      sc.stop
       println("SparkContext stopped.")
-      spark.stop()
+      spark.stop
       println("SparkSession stopped.")
     }
 
