@@ -41,7 +41,7 @@ object exercise_3 {
     .appName("exercise 1")
     .master("local[*]")
     .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
-    .config("spark.app.id", "exercise_10")  // To silence Metrics warning
+    .config("spark.app.id", "exercise_3")  // To silence Metrics warning
     .getOrCreate()
 
   val sc = spark.sparkContext
@@ -78,7 +78,7 @@ object exercise_3 {
       // check the results
       // hdfs dfs -cat /user/cloudera/problem6/customer_brownsville/*.json | head -n 50
 
-      // To have the opportunity to view the web console of Spark: http://localhost:4041/
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
       println("Type whatever to the console to exit......")
       scala.io.StdIn.readLine()
     } finally {
