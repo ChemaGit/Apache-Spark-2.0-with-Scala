@@ -37,6 +37,13 @@ dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.9.5"
 dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.5"
 dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.9.5"
 
+// https://mvnrepository.com/artifact/org.apache.spark/spark-streaming-twitter
+libraryDependencies += "org.apache.spark" %% "spark-streaming-twitter" % "1.6.3"
+
+// https://mvnrepository.com/artifact/org.twitter4j/twitter4j-core
+libraryDependencies += "org.twitter4j" % "twitter4j-core" % "4.0.4"
+libraryDependencies += "org.twitter4j" % "twitter4j-stream" % "4.0.4"
+
 /*
 libraryDependencies += "org.apache.hbase" % "hbase-client" % "1.1.8"
 libraryDependencies += "org.apache.hbase" % "hbase-common" % "1.1.8"
