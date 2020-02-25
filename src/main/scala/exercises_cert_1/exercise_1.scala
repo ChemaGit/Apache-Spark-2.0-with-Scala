@@ -25,31 +25,53 @@ sqoop import \
 --delete-target-dir \
 --target-dir /user/cloudera/exercise_10/products \
 --outdir /home/cloudera/outdir \
---bindir /home/cloudera/bindir \
---num-mappers 8
+--bindir /home/cloudera/bindir
 
 hdfs dfs -ls /user/cloudera/exercise_10/products
 */
 
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql._
 
 object exercise_1 {
+  val spark = SparkSession
+    .builder()
+    .appName("exercise 1")
+    .master("local")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_5")  // To silence Metrics warning
+    .getOrCreate()
+
+  val sc = spark.sparkContext
+
+  val path = "hdfs://quickstart.cloudera/user/cloudera/exercise_10/products"
+
+  val filt = sc.broadcast(List(""," "))
+
   def main(args: Array[String]): Unit = {
-    val spark = SparkSession.builder().appName("exercise 1").master("local").getOrCreate()
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
-    val filt = List(""," ")
-    val products = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/exercise_10/products")
-      .map(line => line.split(","))
-      .filter(arr => !filt.contains(arr(4)))
-      .map(arr => ( (arr(1).toInt, arr(4).toFloat),arr.mkString(",")))
+    try {
+      val products = sc
+        .textFile(path)
+        .map(line => line.split(","))
+        .filter(arr => !filt.value.contains(arr(4)))
+        .map(arr => ( (arr(1).toInt, arr(4).toFloat),arr.mkString(",")))
 
-    val sorted = products.sortByKey()
-    sorted.collect.foreach({case(k,v) => println(v)})
+      val sorted = products.sortByKey()
+      sorted
+        .collect
+        .foreach({case(k,v) => println(v)})
 
-    sc.stop()
-    spark.stop()
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
 }
 

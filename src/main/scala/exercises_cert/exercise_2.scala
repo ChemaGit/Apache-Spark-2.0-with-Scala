@@ -22,37 +22,78 @@ package exercises_cert
 // $ hdfs dfs -put /home/cloudera/files/product.csv /user/cloudera/files
 // $ hdfs dfs -cat /user/cloudera/files/product.csv
 
+import exercises_cert.exercise_1.{sc, spark}
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql._
+import org.apache.spark.sql.types.{DoubleType, IntegerType, StringType, StructField, StructType}
 
 object exercise_2 {
+
+  val warehouseLocation = "/user/hive/warehouse"
+  val path = "hdfs://quickstart.cloudera/user/cloudera/"
+  val spark = SparkSession.builder()
+    .appName("exercise_2")
+    .master("local")
+    .enableHiveSupport()
+    .config("spark.sql.warehouse.dir",warehouseLocation)
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_2")  // To silence Metrics warning
+    .getOrCreate()
+
+  val sc = spark.sparkContext
+
+  val sqlContext = spark.sqlContext
+
   def main(args: Array[String]): Unit = {
-    val warehouseLocation = "/user/hive/warehouse"
-    val spark = SparkSession.builder()
-      .appName("exercise_2")
-      .master("local")
-      .enableHiveSupport()
-      .config("spark.sql.warehouse.dir",warehouseLocation)
-      .getOrCreate()
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
 
-    import spark.implicits._
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
-    val product = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/files/product.csv")
-    val rdd = product.map(line => line.split(","))
-      .filter(arr => arr(0) != "productID")
-      .map(arr => (arr(0).toInt,arr(1),arr(2),arr(3).toInt,arr(4).toDouble)).toDF("id","code","name","quantity","price")
-    rdd.write.orc("hdfs://quickstart.cloudera/user/cloudera/exercise_2/orc")
-    spark.sqlContext.sql("use default")
-    spark.sqlContext.sql("""CREATE TABLE IF NOT EXISTS product_orc(id int, code string, name string, quantity int, price double) STORED AS ORC LOCATION "hdfs://quickstart.cloudera/user/cloudera/exercise_2/orc" """)
-    spark.sqlContext.sql("""SELECT * FROM product_orc""").show()
+    try {
 
-    rdd.write.parquet("hdfs://quickstart.cloudera/user/cloudera/exercise_2/parquet")
-    spark.sqlContext.sql("""CREATE TABLE IF NOT EXISTS product_parquet(id int, code string, name string, quantity int, price double) STORED AS PARQUET LOCATION "hdfs://quickstart.cloudera/user/cloudera/exercise_2/parquet" """)
-    spark.sqlContext.sql("""SELECT * FROM product_parquet""").show()
+      val schema = StructType(List(StructField("id",IntegerType, false), StructField("code",StringType,false),
+        StructField("name",StringType,false), StructField("quantity", IntegerType), StructField("price", DoubleType)))
 
-    sc.stop()
-    spark.stop()
+      val productDF = sqlContext
+        .read
+        .schema(schema)
+        .option("header", true)
+        .option("sep", ",")
+        .csv(s"${path}files/product.csv")
+        .cache
+
+      productDF
+        .write
+        .orc(s"${path}exercise_2/orc")
+
+      sqlContext.sql("use default")
+
+      sqlContext.sql(
+        s"""CREATE EXTERNAL TABLE IF NOT EXISTS product_orc(id int, code string, name string, quantity int, price double)
+          |STORED AS ORC
+          |LOCATION "${path}exercise_2/orc" """.stripMargin)
+
+      sqlContext.sql("""SELECT * FROM product_orc""").show()
+
+      productDF
+        .write
+        .parquet(s"${path}exercise_2/parquet")
+
+      sqlContext.sql(
+        s"""CREATE EXTERNAL TABLE IF NOT EXISTS product_parquet(id int, code string, name string, quantity int, price double)
+          |STORED AS PARQUET
+          |LOCATION "${path}exercise_2/parquet" """.stripMargin)
+
+      sqlContext.sql("""SELECT * FROM product_parquet""").show()
+
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
 }
 
