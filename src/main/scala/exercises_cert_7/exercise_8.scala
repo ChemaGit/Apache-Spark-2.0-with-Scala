@@ -2,7 +2,6 @@ package exercises_cert_7
 
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
 /**
   * Question 6: Correct
