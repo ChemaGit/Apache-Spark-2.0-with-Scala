@@ -23,7 +23,7 @@ sqoop import \
 --table products \
 --as-textfile \
 --delete-target-dir \
---target-dir /user/cloudera/exercise_10/products \
+--target-dir /public/cloudera/retail_db/products \
 --outdir /home/cloudera/outdir \
 --bindir /home/cloudera/bindir
 
@@ -39,12 +39,12 @@ object exercise_1 {
     .appName("exercise 1")
     .master("local")
     .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
-    .config("spark.app.id", "exercise_5")  // To silence Metrics warning
+    .config("spark.app.id", "exercise_1")  // To silence Metrics warning
     .getOrCreate()
 
   val sc = spark.sparkContext
 
-  val path = "hdfs://quickstart.cloudera/user/cloudera/exercise_10/products"
+  val path = "hdfs://quickstart.cloudera/public/cloudera/retail_db/products"
 
   val filt = sc.broadcast(List(""," "))
 
@@ -55,13 +55,16 @@ object exercise_1 {
       val products = sc
         .textFile(path)
         .map(line => line.split(","))
-        .filter(arr => !filt.value.contains(arr(4)))
+        .filter(arr => filt.value.contains(arr(4)) == false)
         .map(arr => ( (arr(1).toInt, arr(4).toFloat),arr.mkString(",")))
+        .cache()
 
-      val sorted = products.sortByKey()
-      sorted
+      products
+        .sortByKey()
         .collect
         .foreach({case(k,v) => println(v)})
+
+      products.unpersist()
 
       // To have the opportunity to view the web console of Spark: http://localhost:4040/
       println("Type whatever to the console to exit......")

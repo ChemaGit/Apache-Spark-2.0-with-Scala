@@ -25,36 +25,101 @@ package exercises_cert_1
 // Previous steps
 // $ hdfs dfs -put /home/cloudera/files/product.csv /user/cloudera/files/
 
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql._
+import org.apache.spark.sql.types.{DoubleType, IntegerType, StringType, StructField, StructType}
 
 object exercise_3 {
+
+  val spark = SparkSession
+    .builder()
+    .appName("exercise 3")
+    .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_3")  // To silence Metrics warning
+    .getOrCreate()
+
+  val sc = spark.sparkContext
+
+  val sqlContext = spark.sqlContext
+
+  val path = "hdfs://quickstart.cloudera/user/cloudera/files/product.csv"
+
   def main(args: Array[String]): Unit = {
-    val spark = SparkSession.builder().appName("exercise 3").master("local").getOrCreate()
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
 
-    import spark.implicits._
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
-    val products = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/files/product.csv")
-      .map(line => line.split(","))
-      .filter(arr => arr(0) != "productID")
-      .map(arr => (arr(0).toInt,arr(1),arr(2),arr(3).toInt,arr(4).toFloat)).toDF("id","code","name","quantity","price")
+    try {
 
-    products.registerTempTable("products")
-    spark.sql("""SELECT * FROM products""")
-    // 1. Select all the records with quantity >= 5000 and name starts with 'Pen'
-    spark.sql("""SELECT * FROM products WHERE quantity >= 5000 and name LIKE('Pen%')""").show()
-    // 2. Select all the records with quantity >= 5000, price is less than 1.24 and name starts with 'Pen'
-    spark.sql("""SELECT * FROM products WHERE quantity >= 5000 and price < 1.24 and name LIKE('Pen%')""").show()
-    // 3. Select all the records witch does not have quantity >= 5000 and name does not starts with 'Pen'
-    spark.sql("""SELECT * FROM products WHERE NOT (quantity >= 5000 and name LIKE('Pen%'))""").show()
-    // 4. Select all the products which name is 'Pen Red', 'Pen Black'
-    spark.sql("""SELECT * FROM products WHERE name IN("Pen Red","Pen Black")""").show()
-    // 5. Select all the products which has price BETWEEN 1.0 AND 2.0 AND quantity BETWEEN 1000 AND 2000.
-    spark.sql("""SELECT * FROM products WHERE price BETWEEN 1.0 and 2.0 AND quantity BETWEEN 1000 AND 2000""").show()
+      val schema = StructType(List(StructField("id", IntegerType, false), StructField("code",StringType, false),
+        StructField("name", StringType, false), StructField("quantity",IntegerType, false),
+        StructField("price",DoubleType, false), StructField("supplierID",IntegerType, false)))
 
-    sc.stop()
-    spark.stop()
+      val products = sqlContext
+        .read
+        .schema(schema)
+        .option("header", false)
+        .option("sep",",")
+        .csv(path)
+        .cache()
+
+      products.createOrReplaceTempView("products")
+
+      sqlContext
+        .sql("""SELECT * FROM products""")
+        .show()
+
+      // 1. Select all the records with quantity >= 5000 and name starts with 'Pen'
+      sqlContext
+        .sql(
+          """SELECT *
+            |FROM products
+            |WHERE quantity >= 5000 and name LIKE('Pen%')""".stripMargin)
+        .show()
+
+      // 2. Select all the records with quantity >= 5000, price is less than 1.24 and name starts with 'Pen'
+      sqlContext
+        .sql(
+          """SELECT *
+            |FROM products
+            |WHERE quantity >= 5000 and price < 1.24 and name LIKE('Pen%')""".stripMargin)
+        .show()
+
+      // 3. Select all the records witch does not have quantity >= 5000 and name does not starts with 'Pen'
+      sqlContext
+        .sql(
+          """SELECT *
+            |FROM products
+            |WHERE NOT (quantity >= 5000 and name LIKE('Pen%'))""".stripMargin)
+        .show()
+
+      // 4. Select all the products which name is 'Pen Red', 'Pen Black'
+      sqlContext
+        .sql(
+          """SELECT *
+            |FROM products
+            |WHERE name IN("Pen Red","Pen Black")""".stripMargin)
+        .show()
+
+      // 5. Select all the products which has price BETWEEN 1.0 AND 2.0 AND quantity BETWEEN 1000 AND 2000.
+      sqlContext
+        .sql(
+          """SELECT *
+            |FROM products
+            |WHERE price BETWEEN 1.0 and 2.0 AND quantity BETWEEN 1000 AND 2000""".stripMargin)
+        .show()
+
+      products.unpersist()
+
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
 }
 
