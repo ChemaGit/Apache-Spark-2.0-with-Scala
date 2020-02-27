@@ -25,62 +25,106 @@ sqoop import \
 --table products \
 --as-textfile \
 --delete-target-dir \
---target-dir /user/cloudera/exercise_10/products \
+--target-dir /public/retail_db/products/ \
 --outdir /home/cloudera/outdir \
 --bindir /home/cloudera/bindir \
---num-mappers 8
 
-hdfs dfs -ls /user/cloudera/exercise_10/products
+hdfs dfs -ls /public/retail_db/products/
 */
 
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql._
 
 object exercise_10 {
+
+  val spark = SparkSession
+    .builder()
+    .appName("exercise 10")
+    .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_10")  // To silence Metrics warning
+    .getOrCreate()
+
+  val sc = spark.sparkContext
+
+  val input = "hdfs://quickstart.cloudera/public/retail_db/products/"
+
   def main(args: Array[String]): Unit = {
-    val spark = SparkSession.builder().appName("exercise 10").master("local").getOrCreate()
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
 
-    val filt = List("", " ")
-    val products = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/exercise_10/products/part-m-00000").map(line => line.split(",")).filter(arr => !filt.contains(arr(4)))
-    val productsPrice = products.map(arr => (arr(4).toFloat, arr))
+    try {
+      Logger.getRootLogger.setLevel(Level.ERROR)
 
-    val productsAsc = productsPrice.sortByKey()
-    productsAsc.collect.foreach(t => println(t._1, t._2.mkString("[",",","]")))
+      val filt = List("", " ")
+      val bcv = sc.broadcast(filt)
 
-    val productsDesc = productsPrice.sortByKey(false)
-    productsDesc.collect.foreach(t => println(t._1, t._2.mkString("[",",","]")))
+      val products = sc
+        .textFile(input)
+        .map(line => line.split(","))
+        .filter(arr => bcv.value.contains(arr(4)) == false)
+        .cache()
 
-    val priceAndId = products.map(arr => ( (arr(4).toFloat, arr(0).toInt), arr.mkString("[",",","]")))
-    val priceAndIdDesc = priceAndId.sortByKey(false)
-    priceAndIdDesc.collect.foreach(x => println("%s => %s".format(x._1,x._2.mkString(""))))
-    println()
 
-    val topPrice = products.top(10)(Ordering[Float].reverse.on(arr => arr(4).toFloat))
-    topPrice.foreach(x => println(x.mkString(",")))
-    println()
+      val productsPrice = products
+        .map(arr => (arr(4).toFloat, arr))
+        .cache()
 
-    val topPrice1 = products.top(10)(Ordering[Float].on(arr => arr(4).toFloat))
-    topPrice1.foreach(x => println(x.mkString(",")))
-    println()
+      productsPrice
+        .sortByKey()
+        .collect
+        .foreach(t => println(t._1, t._2.mkString("[",",","]")))
 
-    val topPrice2 = products.top(10)(Ordering[Float].on(arr => -arr(4).toFloat))
-    topPrice2.foreach(x => println(x.mkString(",")))
-    println()
+      productsPrice
+        .sortByKey(false)
+        .collect
+        .foreach(t => println(t._1, t._2.mkString("[",",","]")))
 
-    val takeOrdered = products.takeOrdered(10)(Ordering[Float].reverse.on(arr => arr(4).toFloat))
-    takeOrdered.foreach(x => println(x.mkString(",")))
-    println()
+      products
+        .map(arr => ( (arr(4).toFloat, arr(0).toInt), arr.mkString("[",",","]")))
+        .sortByKey(false)
+        .collect.foreach(x => println("%s => %s".format(x._1,x._2.mkString(""))))
+      println()
 
-    val takeOrdered1 = products.takeOrdered(10)(Ordering[Float].on(arr => arr(4).toFloat))
-    takeOrdered1.foreach(x => println(x.mkString(",")))
-    println()
+      products
+        .top(10)(Ordering[Float].reverse.on(arr => arr(4).toFloat))
+        .foreach(x => println(x.mkString(",")))
+      println()
 
-    val takeOrdered2 = products.takeOrdered(10)(Ordering[Float].on(arr => -arr(4).toFloat))
-    takeOrdered2.foreach(x => println(x.mkString(",")))
-    println()
+      products
+        .top(10)(Ordering[Float].on(arr => arr(4).toFloat))
+        .foreach(x => println(x.mkString(",")))
+      println()
 
-    sc.stop()
-    spark.stop()
+      products
+        .top(10)(Ordering[Float].on(arr => -arr(4).toFloat))
+        .foreach(x => println(x.mkString(",")))
+      println()
+
+      products
+        .takeOrdered(10)(Ordering[Float].reverse.on(arr => arr(4).toFloat))
+        .foreach(x => println(x.mkString(",")))
+      println()
+
+      products
+        .takeOrdered(10)(Ordering[Float].on(arr => arr(4).toFloat))
+        .foreach(x => println(x.mkString(",")))
+      println()
+
+      products
+        .takeOrdered(10)(Ordering[Float].on(arr => -arr(4).toFloat))
+        .foreach(x => println(x.mkString(",")))
+      println()
+
+      products.unpersist()
+      productsPrice.unpersist()
+
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
 }

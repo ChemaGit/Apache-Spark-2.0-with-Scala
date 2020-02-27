@@ -13,31 +13,51 @@ package exercises_cert
  * combOp : Combine results from all partitions.
  */
 
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql._
 
 object exercise_8 {
+
+  val spark = SparkSession
+    .builder()
+    .appName("exercise 8")
+    .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_8")  // To silence Metrics warning
+    .getOrCreate()
+
+  val sc = spark.sparkContext
+
   def main(args: Array[String]): Unit = {
-    val spark = SparkSession.builder().appName("exercise 8").master("local").getOrCreate()
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
 
-    val people = List( ("Amit", 45,"M"),("Ganga", 43,"F"),("John", 28,"M"),("Lolita", 33,"F"),("Dont Know", 18,"T"))
-    val peopleRdd = sc.parallelize(people) //Create an RDD
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
-    def seqOp(init: (Int, Int), value: (String, Int, String)): (Int, Int) = {
-      (init._1 + value._2, init._2 + 1)
+    try {
+
+      val people = List( ("Amit", 45,"M"),("Ganga", 43,"F"),("John", 28,"M"),("Lolita", 33,"F"),("Dont Know", 18,"T"))
+      val peopleRdd = sc.parallelize(people) //Create an RDD
+
+      def seqOp(init: (Int, Int), value: (String, Int, String)): (Int, Int) = {
+        (init._1 + value._2, init._2 + 1)
+      }
+      def combOp(v: (Int, Int), c: (Int, Int)): (Int, Int) = {
+        (v._1 + c._1, v._2 + c._2)
+      }
+
+      val result = peopleRdd.aggregate(0,0)(seqOp, combOp)
+
+      println(result)
+
+      // res0: (Int, Int) = (167,5)
+
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
     }
-    def combOp(v: (Int, Int), c: (Int, Int)): (Int, Int) = {
-      (v._1 + c._1, v._2 + c._2)
-    }
-
-    val result = peopleRdd.aggregate(0,0)(seqOp, combOp)
-
-    println(result)
-
-    // res0: (Int, Int) = (167,5)
-
-    sc.stop()
-    spark.stop()
   }
 }
