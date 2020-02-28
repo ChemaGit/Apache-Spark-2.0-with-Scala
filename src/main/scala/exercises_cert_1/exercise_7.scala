@@ -10,18 +10,44 @@
     * Array((1,two,3,4),(1,two,5,6))
     */
 
+    import org.apache.log4j.{Level, Logger}
     import org.apache.spark.sql._
 
     object exercise_7 {
+
+      val spark = SparkSession
+        .builder()
+        .appName("exercise_7")
+        .master("local[*]")
+        .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+        .config("spark.app.id", "exercise_7")  // To silence Metrics warning
+        .getOrCreate()
+
+      val sc = spark.sparkContext
+
       def main(args: Array[String]): Unit = {
-        val spark = SparkSession.builder().appName("exercise 7").master("local").getOrCreate()
-        val sc = spark.sparkContext
-        sc.setLogLevel("ERROR")
-        val grouped = sc.parallelize( Seq( ( (1,"two"), List((3,4), (5,6)) ) ) )
-        val flattened = grouped.flatMap({case(s,groupValues) => groupValues.map{value => (s._1, s._2,value._1, value._2)}})
-        flattened.collect.foreach(x => println(x))
-        // res2: Array[(Int, String, Int, Int)] = Array((1,two,3,4), (1,two,5,6))
-        sc.stop()
-        spark.stop()
+
+        Logger.getRootLogger.setLevel(Level.ERROR)
+
+        try {
+          val grouped = sc.parallelize( Seq( ( (1,"two"), List((3,4), (5,6)) ) ) )
+
+          val flattened = grouped
+            .flatMap({case(s,groupValues) => groupValues.map{value => (s._1, s._2,value._1, value._2)}})
+
+          flattened
+            .collect
+            .foreach(x => println(x))
+          // res2: Array[(Int, String, Int, Int)] = Array((1,two,3,4), (1,two,5,6))
+
+          // To have the opportunity to view the web console of Spark: http://localhost:4040/
+          println("Type whatever to the console to exit......")
+          scala.io.StdIn.readLine()
+        } finally {
+          sc.stop()
+          println("SparkContext stopped.")
+          spark.stop()
+          println("SparkSession stopped.")
+        }
       }
     }

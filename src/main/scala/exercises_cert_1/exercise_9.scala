@@ -1,5 +1,6 @@
 package exercises_cert_1
 
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql._
 
 /** Question 32
@@ -18,18 +19,55 @@ import org.apache.spark.sql._
   */
 
 object exercise_9 {
+
+  val spark = SparkSession
+    .builder()
+    .appName("exercise 9")
+    .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_9")  // To silence Metrics warning
+    .getOrCreate()
+
+  val sc = spark.sparkContext
+
+  val path = "hdfs://quickstart.cloudera/user/cloudera/files/"
+
   def main(args: Array[String]): Unit = {
-    val spark = SparkSession.builder().appName("exercise 9").master("local").getOrCreate()
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
 
-    val file1 = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/files/file11.txt").map(line => line.split(",")).map(arr => (arr(0).toInt,(arr(1).toInt,arr(2).toInt)))
-    val file2 = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/files/file22.txt").map(line => line.split(",")).map(arr => (arr(0).toInt,(arr(1),arr(2))))
-    val joined = file1.join(file2)
-    val result = joined.map({case( (k,((v,c),(m,n)))) => c}).reduce({case(c, c1) => c + c1})
-    println(result)
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
-    sc.stop()
-    spark.stop()
+    try {
+
+      val file1 = sc
+        .textFile(s"${path}file11.txt")
+        .map(line => line.split(","))
+        .map(arr => (arr(0).toInt,(arr(1).toInt,arr(2).toInt)))
+
+      val file2 = sc
+        .textFile(s"${path}file22.txt")
+        .map(line => line.split(","))
+        .map(arr => (arr(0).toInt,(arr(1),arr(2))))
+
+      val joined = file1
+        .join(file2)
+        .cache()
+
+      val result = joined
+        .map({case( (k,((v,c),(m,n)))) => c})
+        .reduce({case(c, c1) => c + c1})
+
+      println(result)
+
+      joined.unpersist()
+
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
 }
