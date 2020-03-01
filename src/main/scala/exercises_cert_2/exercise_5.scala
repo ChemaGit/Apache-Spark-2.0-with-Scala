@@ -1,5 +1,8 @@
 package exercises_cert_2
 
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql._
+
 /** Question 43
   * Problem Scenario 77 : You have been given MySQL DB with following details.
   * user=retail_dba
@@ -43,82 +46,142 @@ sqoop import \
 --num-mappers 8
  */
 
-import org.apache.spark.sql._
-
 object exercise_5 {
+
+	val warehouseLocation = "/home/hive/warehouse"
+
+	val spark = SparkSession
+		.builder()
+		.appName("exercise_5")
+		.master("local[*]")
+		.config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+		.config("spark.app.id", "exercise_5")  // To silence Metrics warning
+		.enableHiveSupport()
+		.config("spark.sql.warehouse.dir",warehouseLocation)
+		.getOrCreate()
+
+	val sc = spark.sparkContext
+
+	val sqlContext = spark.sqlContext
+
+	val path = "hdfs://quickstart.cloudera/user/cloudera/tables/"
+
   def main(args: Array[String]): Unit = {
-	val warehouseLocation = "hdfs://quickstart.cloudera/user/hive/warehouse"
-    val spark = SparkSession.builder()
-	.appName("exercise_5")
-	.master("local[*]")
-	.enableHiveSupport()
-	.config("spark.sql.warehouse.dir", warehouseLocation)
-	.getOrCreate()
 
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
+		Logger.getRootLogger.setLevel(Level.ERROR)
 
-    val orders = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/tables/orders")
-        .map(line => line.split(","))
-        .map(arr => (arr(0).toInt, arr(1).substring(0,10)))
+		try {
+			val orders = sc.textFile(s"${path}orders")
+				.map(line => line.split(","))
+				.map(arr => (arr(0).toInt, arr(1).substring(0,10)))
+  			.cache()
 
-    val orderItems = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/tables/order_items")
-        .map(line => line.split(","))
-        .map(arr => (arr(1).toInt, arr(4).toDouble))
+			val orderItems = sc.textFile(s"${path}order_items")
+				.map(line => line.split(","))
+				.map(arr => (arr(1).toInt, arr(4).toDouble))
+  			.cache()
 
-    val joined = orders.join(orderItems)
+			val joined = orders
+				.join(orderItems)
+				.cache()
 
-    joined.take(20).foreach(println)
+			joined
+				.take(20)
+				.foreach(println)
 
-	// 3. Calculate total revenue perday and per order
-	val selectData = joined.map({case( (id,(date,subtotal))) => ((id,date),subtotal)})
-	val result = selectData.reduceByKey( (v,c) => v + c)
-	result.collect.foreach(println)    	
+			// 3. Calculate total revenue perday and per order
+			val selectData = joined.map({case( (id,(date,subtotal))) => ((id,date),subtotal)})
 
-	println("**********************************")
+			selectData
+				.reduceByKey( (v,c) => v + c)
+				.collect
+				.foreach(println)
 
-	// 4. Calculate total and average revenue for each date. - combineByKey - aggregateByKey
-	val selectData2 = joined.map({case( (id,(date, subtotal)) ) => (date, (subtotal,1))})
+			println("**********************************")
 
-	// reduceByKey
-	val redByKey = selectData2.reduceByKey( (v,c) => (v._1 + c._1, v._2 + c._2)).mapValues({case(s,n) => (s, s / n)}).sortByKey()
-	redByKey.take(10).foreach(println)
+			// 4. Calculate total and average revenue for each date. - combineByKey - aggregateByKey
+			val selectData2 = joined.map({case( (id,(date, subtotal)) ) => (date, (subtotal,1))})
 
-	println("********************************")
+			// reduceByKey
+			selectData2
+				.reduceByKey( (v,c) => (v._1 + c._1, v._2 + c._2))
+				.mapValues({case(s,n) => (s, s / n)})
+				.sortByKey()
+				.take(10)
+				.foreach(println)
 
-	// combineByKey
-	val combByKey = selectData2.combineByKey( ( (v: (Double, Int)) => (v._1, v._2)) , (  ( c: (Double, Int),v: (Double, Int) ) => (c._1 + v._1, c._2 + v._2) ) , ( (v: (Double, Int),c: (Double, Int)) => (v._1 + c._1, v._2 + c._2) ) )
-	combByKey.mapValues({case(s, n) => (s, s / n)}).sortByKey().take(10).foreach(println)
+			println("********************************")
 
-	println("********************************")
+			// combineByKey
+			selectData2
+				.combineByKey( ( (v: (Double, Int)) => (v._1, v._2)) , (  ( c: (Double, Int),v: (Double, Int) ) => (c._1 + v._1, c._2 + v._2) ) , ( (v: (Double, Int),c: (Double, Int)) => (v._1 + c._1, v._2 + c._2) ) )
+				.mapValues({case(s, n) => (s, s / n)})
+				.sortByKey()
+				.take(10)
+				.foreach(println)
 
-	// aggregateByKey
-	val aggByKey = selectData2.aggregateByKey((0.0,0))(((z:(Double,Int), v:(Double,Int)) => (z._1 + v._1,z._2 + v._2)),((v:(Double,Int),c:(Double,Int)) => (v._1 + c._1, v._2 + c._2))).mapValues({case(s,n) => (s, s/n)})
-	aggByKey.sortByKey(false).take(10).foreach(println)
+			println("********************************")
 
-	println("********************************")
+			// aggregateByKey
+			selectData2
+				.aggregateByKey((0.0,0))(((z:(Double,Int), v:(Double,Int)) => (z._1 + v._1,z._2 + v._2)),((v:(Double,Int),c:(Double,Int)) => (v._1 + c._1, v._2 + c._2)))
+				.mapValues({case(s,n) => (s, s/n)})
+				.sortByKey(false)
+				.take(10)
+				.foreach(println)
 
-	// SPARK-SQL SOLUTION
-	import spark.implicits._
+			joined.unpersist()
 
-	val ordersDF = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/tables/orders").map(line => line.split(",")).map(r => (r(0).toInt,r(1).substring(0,10))).toDF("id_order","date")
-	val orderItemsDF = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/tables/order_items").map(line => line.split(",")).map(r => (r(1).toInt,r(4).toFloat)).toDF("item_id_order", "subtotal")
+			println("********************************")
 
-	// create temporary view
-	ordersDF.createOrReplaceTempView("orders")
-	orderItemsDF.createOrReplaceTempView("order_items")
+			// SPARK-SQL SOLUTION
+			import spark.implicits._
 
-	// 3. Calculate total revenue perday and per order
-	val resultDF = spark.sql("""SELECT date, id_order, ROUND(SUM(subtotal),2) AS total_revenue FROM orders join order_items ON(id_order = item_id_order) GROUP BY date, id_order ORDER BY date""")
-	resultDF.show()
+			val ordersDF = orders
+				.toDF("id_order","date")
+  			.cache()
 
-	println("**************************************************")
+			orders.unpersist()
 
-	// 4. Calculate total and average revenue for each date
-	val result2DF = spark.sql("""SELECT date, ROUND(SUM(subtotal),2) AS total_revenue, ROUND(AVG(subtotal),2) AS avg_revenue FROM orders JOIN order_items ON(id_order = item_id_order) GROUP BY date ORDER BY date """)
-	result2DF.show()
+			val orderItemsDF = orderItems
+				.toDF("item_id_order", "subtotal")
+				.cache()
 
-    sc.stop()
-    spark.stop()
+			orderItems.unpersist()
+
+			// create temporary view
+			ordersDF.createOrReplaceTempView("orders")
+			orderItemsDF.createOrReplaceTempView("order_items")
+
+			// 3. Calculate total revenue perday and per order
+			sqlContext
+				.sql("""SELECT date, id_order, ROUND(SUM(subtotal),2) AS total_revenue
+							 	|FROM orders join order_items ON(id_order = item_id_order)
+								|GROUP BY date, id_order
+								|ORDER BY date""".stripMargin)
+				.show()
+
+			println("**************************************************")
+
+			// 4. Calculate total and average revenue for each date
+			sqlContext
+				.sql("""SELECT date, ROUND(SUM(subtotal),2) AS total_revenue, ROUND(AVG(subtotal),2) AS avg_revenue
+								|FROM orders JOIN order_items ON(id_order = item_id_order)
+								|GROUP BY date
+								|ORDER BY date """.stripMargin)
+				.show()
+
+			ordersDF.unpersist()
+			orderItemsDF.unpersist()
+
+			// To have the opportunity to view the web console of Spark: http://localhost:4040/
+			println("Type whatever to the console to exit......")
+			scala.io.StdIn.readLine()
+		} finally {
+			sc.stop()
+			println("SparkContext stopped.")
+			spark.stop()
+			println("SparkSession stopped.")
+		}
   }
 }

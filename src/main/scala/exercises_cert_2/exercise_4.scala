@@ -1,6 +1,8 @@
 package exercises_cert_2
 
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql._
+import org.apache.spark.sql.types.{DoubleType, IntegerType, StringType, StructField, StructType}
 
 /** Question 42
   * Problem Scenario 85 : In Continuation of previous question, please accomplish following activities.
@@ -15,53 +17,131 @@ import org.apache.spark.sql._
 
 object exercise_4 {
 
+  val warehouseLocation = "/home/hive/warehouse"
+
+  val spark = SparkSession
+    .builder()
+    .appName("exercise_4")
+    .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_4")  // To silence Metrics warning
+    .enableHiveSupport()
+    .config("spark.sql.warehouse.dir",warehouseLocation)
+    .getOrCreate()
+
+  val sc = spark.sparkContext
+
+  val sqlContext = spark.sqlContext
+
+  val path = "hdfs://quickstart.cloudera/user/cloudera/files/product.csv"
+  val location = "hdfs://quickstart.cloudera/user/cloudera/tables/t_products"
+
   def main(args: Array[String]): Unit = {
-    val warehouseLocation = "/user/hive/warehouse"
-    val spark = SparkSession.builder()
-      .appName("exercise 4")
-      .master("local")
-      .enableHiveSupport()
-      .config("spark.sql.warehouse.dir",warehouseLocation)
-      .getOrCreate()
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
 
-    import spark.implicits._
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
-    val products = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/files/product.csv")
-      .map(line => line.split(","))
-      .filter(arr => arr(0) != "productID")
-      .map(arr => (arr(0).toInt,arr(1),arr(2),arr(3).toInt,arr(4).toDouble,arr(5).toInt))
+    try  {
 
-    val df = products.toDF("id","code","name","quantity","price","idSupplier")
-    df.createOrReplaceTempView("products_view")
+      val schema = StructType(List(StructField("id", IntegerType, false), StructField("code",StringType, false),
+        StructField("name", StringType, false), StructField("quantity",IntegerType, false),
+        StructField("price",DoubleType, false), StructField("supplierID",IntegerType, false)))
 
-    //df.rdd.repartition(1).saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/tables/products")
-    //spark.sqlContext.sql("""CREATE EXTERNAL TABLE  IF NOT EXISTS t_products(id int,code string,name string,quantity int,price double,idSupplier int) ROW FORMAT DELIMITED FIELDS TERMINATED BY "," STORED AS TEXTFILE LOCATION "hdfs://quickstart.cloudera/user/cloudera/tables/products" """)
+      val products = sqlContext
+        .read
+        .schema(schema)
+        .option("header", false)
+        .option("sep",",")
+        .csv(path)
+        .rdd
+        .map(r => r.mkString(","))
+        .saveAsTextFile(location)
 
-    spark.sqlContext.sql("show tables").show()
+      sqlContext
+          .sql("USE default")
 
-    spark.sqlContext.sql("""SELECT * FROM t_products""").show()
-    spark.sqlContext.sql("""SELECT * FROM products_view""").show()
+      sqlContext.sql(
+        s"""CREATE EXTERNAL TABLE  IF NOT EXISTS t_products(
+           |id INT,
+           |code STRING,
+           |name STRING,
+           |quantity INT,
+           |price DOUBLE,
+           |idSupplier INT)
+           |ROW FORMAT DELIMITED FIELDS TERMINATED BY ","
+           |STORED AS TEXTFILE
+           |LOCATION '$location' """.stripMargin)
 
-    // 1. Select all the columns from product table with output header as below. productID AS ID code AS Code name AS Description price AS 'Unit Price'
-    spark.sqlContext.sql("""SELECT id AS ID, code AS Code, name AS Description,quantity, price FROM t_products""").show()
-    // 2. Select code and name both separated by '-' and header name should be 'Product Description'.
-    spark.sqlContext.sql("""SELECT concat(code,"-",name) AS `Product Description` FROM t_products""").show()
-    // 3. Select all distinct prices.
-    spark.sqlContext.sql("""SELECT DISTINCT(price) FROM t_products""").show()
-    // 4. Select distinct price and name combination.
-    spark.sqlContext.sql("""SELECT DISTINCT(price), name FROM t_products""").show()
-    // 5. Select all price data sorted by both code and productID combination.
-    spark.sqlContext.sql("""SELECT id,code, price FROM t_products SORT BY code, id""").show()
-    // 6. count number of products.
-    spark.sqlContext.sql("""SELECT COUNT(*) AS num_products from t_products""")
-    // 7. Count number of products for each code.
-    spark.sql("""SELECT code, COUNT(*) FROM t_products GROUP BY code""").show()
+      sqlContext
+        .sql("show tables")
+        .show()
 
-    // spark.sqlContext.sql("""SELECT * FROM src1 LIMIT 50""").show()
-    sc.stop()
-    spark.stop()
+      sqlContext
+        .sql(
+          """SELECT *
+            |FROM t_products""".stripMargin)
+        .show()
+
+
+      // 1. Select all the columns from product table with output header as below. productID AS ID code AS Code name AS Description price AS 'Unit Price'
+      sqlContext
+        .sql(
+          """SELECT id AS ID, code AS Code, name AS Description,quantity, price
+            |FROM t_products""".stripMargin)
+        .show()
+
+      // 2. Select code and name both separated by '-' and header name should be 'Product Description'.
+      sqlContext
+        .sql(
+        """SELECT concat(code,"-",name) AS `Product Description`
+          |FROM t_products""".stripMargin)
+        .show()
+
+      // 3. Select all distinct prices.
+      sqlContext
+        .sql(
+          """SELECT DISTINCT(price)
+            |FROM t_products""".stripMargin)
+        .show()
+
+      // 4. Select distinct price and name combination.
+      sqlContext
+        .sql(
+          """SELECT DISTINCT(price), name
+            |FROM t_products""".stripMargin)
+        .show()
+
+      // 5. Select all price data sorted by both code and productID combination.
+      sqlContext
+        .sql(
+          """SELECT id,code, price
+            |FROM t_products SORT BY code, id""".stripMargin)
+        .show()
+
+      // 6. count number of products.
+      sqlContext
+        .sql(
+          """SELECT COUNT(*) AS num_products
+            |FROM t_products""".stripMargin)
+        .show()
+
+      // 7. Count number of products for each code.
+      sqlContext
+        .sql(
+          """SELECT code, COUNT(*)
+            |FROM t_products GROUP BY code""".stripMargin)
+        .show()
+
+      sqlContext
+          .sql("""DROP TABLE t_products""")
+
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
-
 }

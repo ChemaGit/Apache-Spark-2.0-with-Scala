@@ -21,36 +21,71 @@ package exercises_cert_2
   * res4: Array[(String, scala.collection.mutable.HashSet[String])] = Array((foo,Set(B, A)), (bar,Set(C, D)))
   */
 
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql._
+
 import scala.collection._
 
 object exercise_6 {
 
-  def main(args: Array[String]): Unit = {
-    val spark = SparkSession.builder().appName("exercise cert 6").master("local[*]").getOrCreate()
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
+	val spark = SparkSession
+		.builder()
+		.appName("exercise_6")
+		.master("local[*]")
+		.config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+		.config("spark.app.id", "exercise_6")  // To silence Metrics warning
+		.getOrCreate()
 
-	val keysWithValuesList = Array("foo=A", "foo=A", "foo=A", "foo=A", "foo=B", "bar=C", "bar=D", "bar=D")
-	val data = sc.parallelize(keysWithValuesList)
-	// Create key value pairs
-	val kv = data.map(d => d.split("=")).map(v => (v(0),v(1))).cache()
-	val initialCount = 0;
+	val sc = spark.sparkContext
+
 	def addToCounts(z: Int, v: String): Int = z + 1
 	def sumPartitionsCounts(v: Int, c:Int): Int = v + c
-	val countByKey = kv.aggregateByKey(initialCount)(addToCounts, sumPartitionsCounts)
-	countByKey.collect.foreach(println)
 
-	println("**********************")
-
-	val initialSet = scala.collection.mutable.HashSet.empty[String]
 	def addToSet(z: mutable.HashSet[String],v: String): mutable.HashSet[String] = z + v
 	def mergePartitionSets(v: mutable.HashSet[String], c: mutable.HashSet[String]): mutable.HashSet[String] = v ++ c
-	val uniqueByKey = kv.aggregateByKey(initialSet)(addToSet, mergePartitionSets)
-	uniqueByKey.collect.foreach(println)
 
-    sc.stop()
-    spark.stop()
+  def main(args: Array[String]): Unit = {
+
+		Logger.getRootLogger.setLevel(Level.ERROR)
+
+		try {
+			val keysWithValuesList = Array("foo=A", "foo=A", "foo=A", "foo=A", "foo=B", "bar=C", "bar=D", "bar=D")
+			val data = sc.parallelize(keysWithValuesList)
+			// Create key value pairs
+			val kv = data
+				.map(d => d.split("="))
+				.map(v => (v(0),v(1)))
+				.cache()
+
+			val initialCount = 0;
+
+			val countByKey = kv.aggregateByKey(initialCount)(addToCounts, sumPartitionsCounts)
+
+			countByKey
+				.collect
+				.foreach(println)
+
+			println("**********************")
+
+			val initialSet = scala.collection.mutable.HashSet.empty[String]
+
+			val uniqueByKey = kv.aggregateByKey(initialSet)(addToSet, mergePartitionSets)
+
+			uniqueByKey
+				.collect
+				.foreach(println)
+
+			kv.unpersist()
+
+			// To have the opportunity to view the web console of Spark: http://localhost:4040/
+			println("Type whatever to the console to exit......")
+			scala.io.StdIn.readLine()
+		} finally {
+			sc.stop()
+			println("SparkContext stopped.")
+			spark.stop()
+			println("SparkSession stopped.")
+		}
   }
 
 }
