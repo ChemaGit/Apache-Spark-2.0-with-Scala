@@ -43,52 +43,119 @@ sqoop import \
 --num-mappers 8
 */
 
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql._
 
 object exercise_7 {
 
-  def main(args: Array[String]): Unit = {
-	val warehouseLocation = "hdfs://quickstart.cloudera/user/hive/warehouse"
 	val spark = SparkSession
-			.builder()
-			.appName("Exercise 7")
-			.master("local[*]")
-			.enableHiveSupport()
-			.config("spark.sql.warehouse.dir", warehouseLocation)
-			.getOrCreate()
+		.builder()
+		.appName("exercise_7")
+		.master("local[*]")
+		.config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+		.config("spark.app.id", "exercise_7")  // To silence Metrics warning
+		.getOrCreate()
+
 	val sc = spark.sparkContext
-	sc.setLogLevel("ERROR")
 
-	// SPARK-RDD SOLUTION
-	val orders = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/tables/orders").map(line => line.split(",")).map(r => (r(0).toInt, r(1)))
-	val orderItems = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/tables/order_items").map(line => line.split(",")).map(r => (r(1).toInt, r(4).toFloat))
+	val sqlContext = spark.sqlContext
 
-	val joined = orders.join(orderItems).map({case((id,(date,subtotal))) => ((id,date.substring(0,10)),subtotal)})
+	val path = "hdfs://quickstart.cloudera/user/cloudera/tables/"
 
-	val ordersPerDate = joined.groupByKey().map({case(((id, date),iter)) => (date,1)}).reduceByKey((v,c) => v + c).sortByKey()
-	ordersPerDate.take(10).foreach(println)
+  def main(args: Array[String]): Unit = {
 
-	println()
-		println("***************")
-		println()
+		Logger.getRootLogger.setLevel(Level.ERROR)
 
-	// SPARK-SQL SOLUTION
-	import spark.implicits._
+		try {
+			// SPARK-RDD SOLUTION
+			val orders = sc
+				.textFile(s"${path}orders")
+				.map(line => line.split(","))
+				.map(r => (r(0).toInt, r(1)))
+  			.cache()
 
-	val ordersDF = orders.toDF("id","date")
-	val orderItemsDF = orderItems.toDF("id","subtotal")
+			val orderItems = sc
+				.textFile(s"${path}order_items")
+				.map(line => line.split(","))
+				.map(r => (r(1).toInt, r(4).toFloat))
+  			.cache()
 
-	ordersDF.createOrReplaceTempView("o")
-	orderItemsDF.createOrReplaceTempView("oi")
-	val joinedDF = spark.sql("""SELECT o.id, date, subtotal FROM o JOIN oi ON(o.id = oi.id) """)
-	joinedDF.createOrReplaceTempView("j")
-	val distinctIdDate = spark.sql("""SELECT date, id FROM j  GROUP BY date, id """)
-	distinctIdDate.createOrReplaceTempView("dd")
-	val ordersPerDateDF = spark.sql("""SELECT substr(date, 0, 10) AS date, COUNT(id) AS total_orders FROM dd GROUP BY date ORDER BY date""")
-	ordersPerDateDF.show(10)
+			val joined = orders
+				.join(orderItems)
+				.map({case((id,(date,subtotal))) => ((id,date.substring(0,10)),subtotal)})
+  			.cache()
 
-	sc.stop()
-	spark.stop()
+			val ordersPerDate = joined
+				.groupByKey()
+				.map({case(((id, date),iter)) => (date,1)}).reduceByKey((v,c) => v + c)
+				.sortByKey()
+
+			ordersPerDate
+				.take(10)
+				.foreach(println)
+
+			joined.unpersist()
+
+			println()
+			println("***************")
+			println()
+
+			// SPARK-SQL SOLUTION
+			import spark.implicits._
+
+			val ordersDF = orders
+				.toDF("id","date")
+				.cache()
+			orders.unpersist()
+
+			val orderItemsDF = orderItems
+				.toDF("id","subtotal")
+				.cache()
+			orderItems.unpersist()
+
+			ordersDF.createOrReplaceTempView("o")
+			orderItemsDF.createOrReplaceTempView("oi")
+
+			val joinedDF = sqlContext
+				.sql(
+  				"""SELECT o.id, date, subtotal
+						|FROM o JOIN oi ON(o.id = oi.id) """.stripMargin)
+				.cache()
+
+			ordersDF.unpersist()
+			orderItemsDF.unpersist()
+
+			joinedDF.createOrReplaceTempView("j")
+
+			val distinctIdDate = sqlContext
+				.sql(
+  				"""SELECT date, id
+						|FROM j  GROUP BY date, id """.stripMargin)
+  				.cache()
+
+			joined.unpersist()
+
+			distinctIdDate.createOrReplaceTempView("dd")
+
+			sqlContext
+				.sql(
+  				"""SELECT substr(date, 0, 10) AS date, COUNT(id) AS total_orders
+						|FROM dd
+						|GROUP BY date
+						|ORDER BY date""".stripMargin)
+				.show(10)
+
+			distinctIdDate.unpersist()
+
+			// To have the opportunity to view the web console of Spark: http://localhost:4040/
+			println("Type whatever to the console to exit......")
+			scala.io.StdIn.readLine()
+		} finally {
+			sc.stop()
+			println("SparkContext stopped.")
+			spark.stop()
+			println("SparkSession stopped.")
+		}
   }
 
 }
