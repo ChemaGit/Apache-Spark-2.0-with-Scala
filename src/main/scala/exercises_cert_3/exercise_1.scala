@@ -1,5 +1,6 @@
 package exercises_cert_3
 
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession
 
 /** Question 50
@@ -16,25 +17,36 @@ import org.apache.spark.sql.SparkSession
 
 object exercise_1 {
 
+  val spark = SparkSession
+    .builder()
+    .appName("exercise_1")
+    .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_1")  // To silence Metrics warning
+    .getOrCreate()
+
+  val sc = spark.sparkContext
+
   def main(args: Array[String]): Unit = {
-    val spark = SparkSession
-      .builder()
-      .appName("exercise 1")
-      .master("local[*]")
-      .getOrCreate()
 
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
-    val pairRDD1 = sc.parallelize(List( ("cat",2), ("cat", 5), ("book", 4),("cat", 12)))
-    val pairRDD2 = sc.parallelize(List( ("cat",2), ("cup", 5), ("mouse", 4),("cat", 12)))
+    try {
+      val pairRDD1 = sc.parallelize(List( ("cat",2), ("cat", 5), ("book", 4),("cat", 12)))
+      val pairRDD2 = sc.parallelize(List( ("cat",2), ("cup", 5), ("mouse", 4),("cat", 12)))
 
-    val join = pairRDD1.fullOuterJoin(pairRDD2)
+      val join = pairRDD1.fullOuterJoin(pairRDD2)
 
-    join.foreach(println)
+      join.foreach(println)
 
-    sc.stop()
-    spark.stop()
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
-
 }

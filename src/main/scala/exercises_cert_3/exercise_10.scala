@@ -1,6 +1,5 @@
 package exercises_cert_3
 
-import org.apache.spark.sql.SparkSession
 /** Question 60
   * Problem Scenario 30 : You have been given three csv files in hdfs as below.
   * EmployeeName.csv with the field (id, name)
@@ -43,6 +42,10 @@ import org.apache.spark.sql.SparkSession
   * E09,10000
   * E10,10000
   */
+
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
+
 object exercise_10 {
   /**
     * create the files in the local system
@@ -57,54 +60,90 @@ object exercise_10 {
     *
     * output => id,name,salary,managerName
     */
+
+  val spark = SparkSession
+    .builder()
+    .appName("exercise_9")
+    .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_9")  // To silence Metrics warning
+    .getOrCreate()
+
+  val sc = spark.sparkContext
+
+  val sqlContext = spark.sqlContext
+
+  val pathIn = "hdfs://quickstart.cloudera/user/cloudera/files/"
+  val pathOut = "hdfs://quickstart.cloudera/user/cloudera/exercise_10/output"
+
   def main(args: Array[String]): Unit = {
-    val spark = SparkSession
-      .builder()
-      .appName("exercise 10")
-      .master("local[*]")
-      .enableHiveSupport()
-      .getOrCreate()
 
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
-    import spark.implicits._
+    try {
+      import spark.implicits._
 
-    val empManager = sc
-      .textFile("hdfs://quickstart.cloudera/user/cloudera/files/EmployeeManager.csv")
+      val empManager = sc
+        .textFile(s"${pathIn}EmployeeManager.csv")
         .map(line => line.split(","))
         .map(r => (r(0), r(1)))
         .toDF("idMan", "managerName")
+        .cache()
 
-    val empName = sc
-        .textFile("hdfs://quickstart.cloudera/user/cloudera/files/EmployeeName.csv")
+      val empName = sc
+        .textFile(s"${pathIn}EmployeeName.csv")
         .map(line => line.split(","))
         .map(r => (r(0), r(1)))
         .toDF("idEmp", "name")
+        .cache()
 
-    val empSalary = sc
-        .textFile("hdfs://quickstart.cloudera/user/cloudera/files/EmployeeSalary.csv")
+      val empSalary = sc
+        .textFile(s"${pathIn}EmployeeSalary.csv")
         .map(line => line.split(","))
         .map(r => (r(0), r(1)))
         .toDF("idSal", "salary")
+        .cache()
 
-    empManager.createOrReplaceTempView("manager")
-    empName.createOrReplaceTempView("employee")
-    empSalary.createOrReplaceTempView("salary")
+      empManager.createOrReplaceTempView("manager")
+      empName.createOrReplaceTempView("employee")
+      empSalary.createOrReplaceTempView("salary")
 
-    spark.sqlContext.sql("""SELECT idMan, name, salary, managerName FROM employee JOIN manager ON(idEmp = idMan) JOIN salary ON(idEmp = idSal) ORDER BY idMan""").show()
+      sqlContext
+        .sql(
+          """SELECT idMan, name, salary, managerName
+            |FROM employee JOIN manager ON(idEmp = idMan) JOIN salary ON(idEmp = idSal)
+            |ORDER BY idMan""".stripMargin)
+        .show()
 
-    val result = spark.sqlContext.sql("""SELECT idMan, name, salary, managerName FROM employee JOIN manager ON(idEmp = idMan) JOIN salary ON(idEmp = idSal) ORDER BY idMan""")
+      val result = sqlContext
+        .sql(
+          """SELECT idMan, name, salary, managerName
+            |FROM employee JOIN manager ON(idEmp = idMan) JOIN salary ON(idEmp = idSal)
+            |ORDER BY idMan""".stripMargin)
 
-    result.rdd.map(r => r.mkString(",")).saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercise_10/output")
+      result
+        .rdd
+        .map(r => r.mkString(","))
+        .saveAsTextFile(pathOut)
 
-    /**
-      * Check the results
-      * $ hdfs dfs -ls /user/cloudera/exercise_10/output
-      * $ hdfs dfs -cat /user/cloudera/exercise_10/output/part-00000
-      */
+      empManager.unpersist()
+      empName.unpersist()
+      empSalary.unpersist()
 
-    sc.stop()
-    spark.stop()
+      /**
+        * Check the results
+        * $ hdfs dfs -ls /user/cloudera/exercise_10/output
+        * $ hdfs dfs -cat /user/cloudera/exercise_10/output/part-00000
+        */
+
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
 }

@@ -1,7 +1,5 @@
 package exercises_cert_3
 
-import org.apache.spark.sql.SparkSession
-
 /** Question 54
   * Problem Scenario 87 : You have been given below three files
   * product.csv (Create this file in hdfs)
@@ -38,6 +36,10 @@ import org.apache.spark.sql.SparkSession
   * Select product, its price , its supplier name where product price is less than 0.6 using SparkSQL
   */
 
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types.{DoubleType, IntegerType, StringType, StructField, StructType}
+
 object exercise_5 {
   /**
     * Building files
@@ -49,45 +51,83 @@ object exercise_5 {
     * $ hdfs dfs -put /home/cloudera7files/products_suppliers.csv /user/cloudera/files
     */
 
+  val spark = SparkSession
+    .builder()
+    .appName("exercise_5")
+    .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_5")  // To silence Metrics warning
+    .getOrCreate()
+
+  val sc = spark.sparkContext
+
+  val sqlContext = spark.sqlContext
+
+  val path = "hdfs://quickstart.cloudera/user/cloudera/files/"
+
   def main(args: Array[String]): Unit = {
-    val spark = SparkSession
-      .builder()
-      .appName("exercise 5")
-      .master("local[*]")
-      .getOrCreate()
 
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
-    import spark.implicits._
+    try {
 
-    val product = sc
-        .textFile("hdfs://quickstart.cloudera/user/cloudera/files/product.csv")
-        .map(line => line.split(","))
-        .filter(r => !r(0).contains("productID"))
-        .map(r => (r(0).toInt, r(1), r(2), r(3).toInt, r(4).toDouble))
-        .toDF("pId","code","name","quantity","price")
+      val productSchema = StructType(List(StructField("pId", IntegerType, false), StructField("code",StringType, false),
+        StructField("name", StringType, false), StructField("quantity",IntegerType, false),
+        StructField("price",DoubleType, false), StructField("sId",IntegerType, false)))
 
-    val supplier = sc
-        .textFile("hdfs://quickstart.cloudera/user/cloudera/files/supplier.csv")
-        .map(line => line.split(","))
-        .map(r => (r(0).toInt, r(1), r(2)))
-        .toDF("sId","sName", "phone")
+      val supplierSchema = StructType(List(StructField("supId", IntegerType, false), StructField("name",StringType, false),
+        StructField("phone", StringType, false)))
 
-    val pr_sp = sc
-        .textFile("hdfs://quickstart.cloudera/user/cloudera/files/products_suppliers.csv")
-        .map(line => line.split(","))
-        .map(r => (r(0).toInt, r(1).toInt))
-        .toDF("prId", "spId")
+      val productSupplierSchema = StructType(List(StructField("prId", IntegerType, false), StructField("sppId",IntegerType, false)))
 
-    product.createOrReplaceTempView("pr")
-    supplier.createOrReplaceTempView("sp")
-    pr_sp.createOrReplaceTempView("pr_sp")
+      val products = sqlContext
+        .read
+        .schema(productSchema)
+        .option("header", false)
+        .option("sep",",")
+        .csv(s"${path}product.csv")
+        .cache()
 
-    spark.sqlContext.sql("""SELECT code, name, price, sName, phone FROM pr JOIN pr_sp ON(pId = prId) JOIN sp ON(spId = sId) WHERE price < 0.6""").show()
+      val supplier = sqlContext
+        .read
+        .schema(supplierSchema)
+        .option("header", false)
+        .option("sep",",")
+        .csv(s"${path}supplier.csv")
+        .cache()
 
-    sc.stop()
-    spark.stop()
+      val pr_sp = sqlContext
+        .read
+        .schema(productSupplierSchema)
+        .option("header", false)
+        .option("sep",",")
+        .csv(s"${path}products_suppliers.csv")
+        .cache()
+
+      products.createOrReplaceTempView("pr")
+      supplier.createOrReplaceTempView("sp")
+      pr_sp.createOrReplaceTempView("pr_sp")
+
+      sqlContext
+        .sql(
+          """SELECT code, name, price, sName, phone
+            |FROM pr JOIN pr_sp ON(pId = prId) JOIN sp ON(spId = sId)
+            |WHERE price < 0.6""".stripMargin)
+        .show()
+
+      products.unpersist()
+      supplier.unpersist()
+      pr_sp.unpersist()
+
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
 
 }

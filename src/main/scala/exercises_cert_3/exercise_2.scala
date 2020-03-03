@@ -1,7 +1,5 @@
 package exercises_cert_3
 
-import org.apache.spark.sql.SparkSession
-
 /** Question 51
   * Problem Scenario 72 : You have been given a table named "employee2" with following detail.
   * first_name string
@@ -16,6 +14,9 @@ import org.apache.spark.sql.SparkSession
   * {"first_name":"Lokesh", "last_name":"Yadav"}
   */
 
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
+
 object exercise_2 {
 
   // edit the file
@@ -23,37 +24,86 @@ object exercise_2 {
   // put the file in hadoop file system
   // $ hdfs dfs -put employee.json /user/cloudera/files/
 
+  val spark = SparkSession
+    .builder()
+    .appName("exercise_2")
+    .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_2")  // To silence Metrics warning
+    .enableHiveSupport()
+    .getOrCreate()
+
+  val sc = spark.sparkContext
+
+  val sqlContext = spark.sqlContext
+
+  val path = "hdfs://quickstart.cloudera/user/cloudera/files/"
+
+  val pathDB = "hdfs://quickstart.cloudera/user/cloudera/hadoopexam/"
+
+  // file:/home/cloudera/IdeaProjects/apache-spark-2.0-scala/spark-warehouse/hadoopexam.db
+
   def main(args: Array[String]): Unit = {
-    val spark = SparkSession
-      .builder()
-      .appName("exercise 2")
-      .master("local[2]")
-      .enableHiveSupport()
-      .config("spark.sql.warehouse.dir","hdfs://quickstart.cloudera/user/hive/warehouse/")
-      .getOrCreate()
 
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
-    sc.getConf.getAll.foreach(println)
+    try {
+      // sc.getConf.getAll.foreach(println)
 
-    // create database hadoopexam
-    spark.sqlContext.sql("""CREATE DATABASE IF NOT EXISTS hadoopexam LOCATION "hdfs://quickstart.cloudera/user/hive/warehouse/" """)
-    // spark.sqlContext.sql("""show databases""").show()
-    // spark.sqlContext.sql("""show tables""").show()
-    // read the file and create a table employee2 whit Spark
-    val employee = spark.sqlContext.read.json("hdfs://quickstart.cloudera/user/cloudera/files/employee.json")
-    employee
-      .rdd
-      .map(r => r.mkString(","))
-        .saveAsTextFile("hdfs://quickstart.cloudera/user/hive/warehouse/hadoopexam.db/t_employee2")
+      // create database hadoopexam
+      sqlContext.sql(s"""CREATE DATABASE IF NOT EXISTS hadoopexam""")
 
-    spark.sqlContext.sql("""use hadoopexam""")
-    spark.sqlContext.sql("""CREATE TABLE IF NOT EXISTS t_employee2(first_name string, last_name string) ROW FORMAT DELIMITED FIELDS TERMINATED BY "," LOCATION "hdfs://quickstart.cloudera/user/hive/warehouse/hadoopexam.db/t_employee2" """)
+      sqlContext.sql("""SHOW databases""").show()
+      sqlContext.sql("""SHOW tables""").show()
+      sqlContext
+          .sql("""DESCRIBE DATABASE EXTENDED hadoopexam""")
+          .show(100, truncate = false)
 
-    spark.sqlContext.sql("""SELECT * FROM t_employee2""").show()
+      // read the file and create a table employee2 whit Spark
+      sqlContext
+        .read
+        .json(s"${path}employee.json")
+        .rdd
+        .map(r => r.mkString(","))
+        .saveAsTextFile(s"${pathDB}t_employee2")
 
-    sc.stop()
-    spark.stop()
+      sqlContext.sql("""USE hadoopexam""")
+
+      sqlContext.sql("""DROP TABLE IF EXISTS t_employee2""")
+
+      sqlContext.sql(
+        s"""CREATE EXTERNAL TABLE IF NOT EXISTS t_employee2(first_name string, last_name string)
+           |ROW FORMAT DELIMITED FIELDS TERMINATED BY ","
+           |LOCATION "${pathDB}t_employee2" """.stripMargin)
+
+      sqlContext
+          .sql("""SHOW TABLES""")
+          .show()
+
+      sqlContext
+          .sql("""DESCRIBE FORMATTED t_employee2""")
+          .show(100, truncate = false)
+
+      sqlContext.sql(
+        """SELECT * FROM
+          |t_employee2""".stripMargin)
+        .show()
+
+      sqlContext
+        .sql("""DROP TABLE t_employee2""")
+
+      sqlContext
+        .sql("""SHOW TABLES""")
+        .show()
+
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
 }

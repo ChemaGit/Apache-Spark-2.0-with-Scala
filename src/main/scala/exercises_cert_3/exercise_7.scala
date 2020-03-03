@@ -1,7 +1,5 @@
 package exercises_cert_3
 
-import org.apache.spark.sql.SparkSession
-
 /** Question 56
   * Problem Scenario 47 : You have been given below code snippet, with intermediate output.
   * val z = sc.parallelize(List(1,2,3,4,5,6), 2)
@@ -15,33 +13,53 @@ import org.apache.spark.sql.SparkSession
   * Initialize the aggregate with value 5. hence expected output will be 16.
   */
 
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
+
 object exercise_7 {
+
+  val spark = SparkSession
+    .builder()
+    .appName("exercise_7")
+    .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_7")  // To silence Metrics warning
+    .getOrCreate()
+
+  val sc = spark.sparkContext
 
   def myFunc(index: Int, iter: Iterator[Int]): Iterator[String] = {
     iter.toList.map(x => s"[partID]: $index, val: $x]").iterator
   }
 
   def main(args: Array[String]): Unit = {
-    val spark = SparkSession
-      .builder()
-      .appName("exercise 7")
-      .master("local[*]")
-      .getOrCreate()
 
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
-    val z = sc.parallelize(List(1,2,3,4,5,6), 2)
+    try {
+      val z = sc.parallelize(List(1,2,3,4,5,6), 2)
 
-    z.mapPartitionsWithIndex(myFunc).collect.foreach(print)
-    // [partID]: 0, val: 1][partID]: 0, val: 2][partID]: 0, val: 3][partID]: 1, val: 4][partID]: 1, val: 5][partID]: 1, val: 6]
+      z.mapPartitionsWithIndex(myFunc)
+        .collect
+        .foreach(print)
+      // [partID]: 0, val: 1][partID]: 0, val: 2][partID]: 0, val: 3][partID]: 1, val: 4][partID]: 1, val: 5][partID]: 1, val: 6]
 
-    val agg = z.aggregate(5)(((z: Int, v: Int) => z.max(v)), ((c: Int, v: Int) => c + v))
+      val agg = z
+        .aggregate(5)(((z: Int, v: Int) => z.max(v)), ((c: Int, v: Int) => c + v))
 
-    println(s"agg: $agg")
+      println()
 
-    sc.stop()
-    spark.stop()
+      println(s"agg: $agg")
+
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
 
 }

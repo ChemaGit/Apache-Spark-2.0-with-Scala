@@ -1,7 +1,5 @@
 package exercises_cert_3
 
-import org.apache.spark.sql.SparkSession
-
 /** Question 53
   * Problem Scenario 69 : Write down a Spark Application using Scala,
   * In which it read a file "Content.txt" (On hdfs) with following content.
@@ -15,36 +13,60 @@ import org.apache.spark.sql.SparkSession
   * Spark is faster than MapReduce
   */
 
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
+
+
 object exercise_4 {
 
+  val spark = SparkSession
+    .builder()
+    .appName("exercise_4")
+    .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_4")  // To silence Metrics warning
+    .getOrCreate()
+
+  val sc = spark.sparkContext
+
+  val path = "hdfs://quickstart.cloudera/user/cloudera/files/"
+
   def main(args: Array[String]): Unit = {
-    val spark = SparkSession
-      .builder()
-      .appName("exercise 4")
-      .master("local[*]")
-      .getOrCreate()
 
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
-    val filt = List("", " ")
+    try {
+      val filt = sc.broadcast(List("", " "))
 
-    val content = sc
-        .textFile("hdfs://quickstart.cloudera/user/cloudera/files/Content.txt")
+      val content = sc
+        .textFile(s"${path}Content.txt")
         .flatMap(line => line.split(" "))
-        .filter(w => !filt.contains(w))
+        .filter(w => filt.value.contains(w) == false)
         .filter(w => w.length > 2)
+        .cache()
 
-    content.collect.foreach(r => println(r.mkString("")))
+      content
+        .collect
+        .foreach(r => println(r.mkString("")))
 
-    content.saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercise_4")
+      content
+        .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercise_4")
 
-    // check the results
-    // hdfs dfs -ls /user/cloudera/exercise_4
-    // hdfs dfs -cat /user/cloudera/exercise_4/part-00000
+      content.unpersist()
 
-    sc.stop()
-    spark.stop()
+      // check the results
+      // hdfs dfs -ls /user/cloudera/exercise_4
+      // hdfs dfs -cat /user/cloudera/exercise_4/part-00000
+
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
 
 }
