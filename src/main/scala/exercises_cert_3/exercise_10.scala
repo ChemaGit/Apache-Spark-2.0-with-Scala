@@ -63,10 +63,10 @@ object exercise_10 {
 
   val spark = SparkSession
     .builder()
-    .appName("exercise_9")
+    .appName("exercise_10")
     .master("local[*]")
     .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
-    .config("spark.app.id", "exercise_9")  // To silence Metrics warning
+    .config("spark.app.id", "exercise_10")  // To silence Metrics warning
     .getOrCreate()
 
   val sc = spark.sparkContext
