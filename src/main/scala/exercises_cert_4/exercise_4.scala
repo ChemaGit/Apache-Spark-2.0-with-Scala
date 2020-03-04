@@ -1,7 +1,5 @@
 package exercises_cert_4
 
-import org.apache.spark.sql.SparkSession
-
 /** Question 68
   * Problem Scenario 68 : You have given a file as below.
   * hdfs://quickstart.cloudera/user/cloudera/files/file111.txt
@@ -26,35 +24,76 @@ import org.apache.spark.sql.SparkSession
   * $ hdfs dfs -put /home/cloudera/files/file111.txt /user/cloudera/files
   */
 
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
+
 object exercise_4 {
 
+  val spark = SparkSession
+    .builder()
+    .appName("exercise_4")
+    .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_4")  // To silence Metrics warning
+    .getOrCreate()
+
+  val sc = spark.sparkContext
+
+  val path = "hdfs://quickstart.cloudera/user/cloudera/files/"
+  val output = "hdfs://quickstart.cloudera/user/cloudera/bigrams/result"
+
   def main(args: Array[String]): Unit = {
-    val spark = SparkSession
-      .builder()
-      .appName("exercise 4")
-      .master("local[*]")
-      .getOrCreate()
 
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
-    val sentences = sc.textFile("hdfs://quickstart.cloudera/user/cloudera/files/file111.txt").glom()
-    val joined = sentences.map(x => " ".concat(x.mkString(""))).flatMap(x => x.split('.'))
+    try {
+      val l = sc.broadcast(List("", " "))
 
-    val l = List("", " ")
-    val bigrams = joined.map(line => line.split("\\W").filter(w => !l.contains(w))).flatMap(w => {for(i <- 0 until w.length -1)yield ( (w(i),w(i + 1)), 1)})
-    bigrams.collect.foreach(println)
-    val bigramsCount = bigrams.reduceByKey( (v,c) => v + c).sortBy(t => t._2, false)
-    bigramsCount.collect.foreach(println)
-    bigramsCount.saveAsTextFile("/user/cloudera/bigrams/result")
+      val sentences = sc
+        .textFile(s"${path}file111.txt")
+        .glom()
 
-    /**
-      * check the results
-      * $ hdfs dfs -cat /user/cloudera/bigrams/result/part*
-      */
+      val joined = sentences
+        .map(x => " ".concat(x.mkString("")))
+        .flatMap(x => x.split('.'))
 
-    sc.stop()
-    spark.stop()
+      val bigrams = joined
+          .map(line => line.split("\\W")
+          .filter(w => l.value.contains(w) == false))
+          .flatMap(w => {for(i <- 0 until w.length -1)yield ( (w(i),w(i + 1)), 1)})
+          .cache()
+
+      bigrams
+        .collect
+        .foreach(println)
+
+      val bigramsCount = bigrams
+          .reduceByKey( (v,c) => v + c)
+          .sortBy(t => t._2, false)
+          .cache()
+
+      bigramsCount
+        .collect
+        .foreach(println)
+
+      bigramsCount.saveAsTextFile(output)
+
+      bigrams.unpersist()
+      bigramsCount.unpersist()
+
+      /**
+        * check the results
+        * $ hdfs dfs -cat /user/cloudera/bigrams/result/part*
+        */
+
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
-
 }

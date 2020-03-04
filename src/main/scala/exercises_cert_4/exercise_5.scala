@@ -1,7 +1,5 @@
 package exercises_cert_4
 
-import org.apache.spark.sql.SparkSession
-
 /** Question 69
   * Problem Scenario 64 : You have been given below code snippet.
   * val a = sc.parallelize(List("dog", "salmon", "salmon", "rat", "elephant"), 3)
@@ -17,26 +15,43 @@ import org.apache.spark.sql.SparkSession
   * (3,(Some(rat),cat)), (3,(Some(rat),gnu)), (3,(Some(rat),bee)), (4,(None,wolf)),(4,(None,bear)))
   */
 
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
+
 object exercise_5 {
+
+  val spark = SparkSession
+    .builder()
+    .appName("exercise_4")
+    .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_4")  // To silence Metrics warning
+    .getOrCreate()
+
+  val sc = spark.sparkContext
+
   def main(args: Array[String]): Unit = {
-    val spark = SparkSession
-      .builder()
-      .appName("exercise 5")
-      .master("local[*]")
-      .getOrCreate()
 
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
-    val a = sc.parallelize(List("dog", "salmon", "salmon", "rat", "elephant"), 3)
-    val b = a.keyBy(_.length)
-    val c = sc.parallelize(List("dog","cat","gnu","salmon","rabbit","turkey","wolf","bear","bee"), 3)
-    val d = c.keyBy(_.length)
+    try {
+      val a = sc.parallelize(List("dog", "salmon", "salmon", "rat", "elephant"), 3)
+      val b = a.keyBy(_.length)
+      val c = sc.parallelize(List("dog","cat","gnu","salmon","rabbit","turkey","wolf","bear","bee"), 3)
+      val d = c.keyBy(_.length)
 
-    val operation = b.rightOuterJoin(d)
-    operation.foreach(println)
+      val operation = b.rightOuterJoin(d)
 
-    sc.stop()
-    spark.stop()
+      operation.foreach(println)
+
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
 }

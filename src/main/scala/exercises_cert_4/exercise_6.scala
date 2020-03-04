@@ -1,8 +1,5 @@
 package exercises_cert_4
 
-import org.apache.spark.sql.SparkSession
-
-
 /** Question 70
   * Problem Scenario 56 : You have been given below code snippet.
   * val a = sc.parallelize(1 to 100, 3)
@@ -12,25 +9,38 @@ import org.apache.spark.sql.SparkSession
   * Array(34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55,56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66),
   * Array(67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100))
   */
+
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
+
 object exercise_6 {
 
-  @transient lazy val spark = SparkSession
+  val spark = SparkSession
     .builder()
-    .appName("exercise 6")
+    .appName("exercise_6")
     .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_6")  // To silence Metrics warning
     .getOrCreate()
 
-  @transient lazy val sc = spark.sparkContext
+  val sc = spark.sparkContext
 
   def main(args: Array[String]): Unit = {
-    sc.setLogLevel("ERROR")
+    Logger.getRootLogger.setLevel(Level.ERROR)
+    try {
+      val a = sc.parallelize(1 to 100, 3)
 
-    val a = sc.parallelize(1 to 100, 3)
+      //glom Assembles an array that contains all elements of the partition and embeds it in an RDD. Each returned array contains the contents of one partition
+      val b = a.glom().collect
 
-    //glom Assembles an array that contains all elements of the partition and embeds it in an RDD. Each returned array contains the contents of one partition
-    val b = a.glom().collect
-
-    sc.stop()
-    spark.stop()
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
 }

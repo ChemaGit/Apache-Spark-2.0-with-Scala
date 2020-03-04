@@ -1,7 +1,5 @@
 package exercises_cert_4
 
-import org.apache.spark.sql.SparkSession
-
 /** Question 73
   * Problem Scenario 71 :
   * Write down a Spark script using Scala,
@@ -22,34 +20,50 @@ import org.apache.spark.sql.SparkSession
   * $ hdfs dfs -put /home/cloudera/files/Content.txt /user/cloudera/files
   */
 
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
+
 object exercise_8 {
 
-  lazy val spark = SparkSession
+  val spark = SparkSession
     .builder()
     .appName("exercise_8")
     .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_8")  // To silence Metrics warning
     .getOrCreate()
 
-  lazy val sc = spark.sparkContext
+  val sc = spark.sparkContext
+
+  val inputPath = "hdfs://quickstart.cloudera/user/cloudera/files/Content.txt"
+  val outputPath = "hdfs://quickstart.cloudera/user/cloudera/exercises/question_73/"
 
   def main(args: Array[String]): Unit = {
-    sc.setLogLevel("ERROR")
 
-    val content = sc
-        .textFile("hdfs://quickstart.cloudera/user/cloudera/files/Content.txt")
+    Logger.getRootLogger.setLevel(Level.ERROR)
+
+    try {
+      val content = sc
+        .textFile(inputPath)
         .map(line => (line.split(" ")(0), line))
-        .saveAsSequenceFile("hdfs://quickstart.cloudera/user/cloudera/exercises/question_73/")
+        .saveAsSequenceFile(outputPath)
 
-    val sequence = sc
-        .sequenceFile("hdfs://quickstart.cloudera/user/cloudera/exercises/question_73/",classOf[org.apache.hadoop.io.Text], classOf[org.apache.hadoop.io.Text])
+      val sequence = sc
+        .sequenceFile(outputPath,classOf[org.apache.hadoop.io.Text], classOf[org.apache.hadoop.io.Text])
 
-    val printSequence = sequence
+      val printSequence = sequence
         .map(t => (t._1.toString, t._2.toString))
         .collect
         .foreach(println)
 
-    sc.stop()
-    spark.stop()
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
-
 }
