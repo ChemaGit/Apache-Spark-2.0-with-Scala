@@ -105,9 +105,6 @@ object exercise_6 {
           |FROM course JOIN fee ON(idC = idF)""".stripMargin)
         .show()
 
-      course.unpersist()
-      fee.unpersist()
-
       // To have the opportunity to view the web console of Spark: http://localhost:4040/
       println("Type whatever to the console to exit......")
       scala.io.StdIn.readLine()

@@ -115,10 +115,6 @@ object exercise_5 {
             |WHERE price < 0.6""".stripMargin)
         .show()
 
-      products.unpersist()
-      supplier.unpersist()
-      pr_sp.unpersist()
-
       // To have the opportunity to view the web console of Spark: http://localhost:4040/
       println("Type whatever to the console to exit......")
       scala.io.StdIn.readLine()
