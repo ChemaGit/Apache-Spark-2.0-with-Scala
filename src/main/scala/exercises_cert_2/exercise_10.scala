@@ -44,8 +44,6 @@ import org.apache.spark.sql.types.{DoubleType, IntegerType, StringType, StructFi
 
 object exercise_10 {
 
-  val warehouseLocation = "/home/hive/warehouse"
-
   val spark = SparkSession
     .builder()
     .appName("exercise_10")
@@ -53,7 +51,6 @@ object exercise_10 {
     .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
     .config("spark.app.id", "exercise_10")  // To silence Metrics warning
     .enableHiveSupport()
-    .config("spark.sql.warehouse.dir",warehouseLocation)
     .getOrCreate()
 
   val sc = spark.sparkContext
@@ -127,10 +124,6 @@ object exercise_10 {
             |FROM pr JOIN pr_sp ON(pId = prId) JOIN sp ON(sppId = supId)
             |WHERE sp.name LIKE("ABC Traders") """.stripMargin)
         .show()
-
-      products.unpersist()
-      supplier.unpersist()
-      pr_sp.unpersist()
 
       // To have the opportunity to view the web console of Spark: http://localhost:4040/
       println("Type whatever to the console to exit......")

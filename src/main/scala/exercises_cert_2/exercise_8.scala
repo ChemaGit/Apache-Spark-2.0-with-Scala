@@ -87,8 +87,6 @@ object exercise_8 {
 				.collect
 				.foreach(println)
 
-			resultRdd.unpersist()
-
 			println()
 			println("************************")
 			println()
@@ -192,9 +190,6 @@ object exercise_8 {
 				s"""CREATE EXTERNAL TABLE  t_sales_cost(department string,designation string,state string,empCount bigint,totalCost bigint,avgCost double)
 					 				|STORED AS PARQUET LOCATION '${dbPath}t_sales_cost'
 					 				|TBLPROPERTIES("parquet.compression"="snappy") """.stripMargin)
-
-			salesDF.unpersist()
-			resultSql.unpersist()
 
 			// To have the opportunity to view the web console of Spark: http://localhost:4040/
 			println("Type whatever to the console to exit......")

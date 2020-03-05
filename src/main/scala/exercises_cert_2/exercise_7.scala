@@ -94,8 +94,6 @@ object exercise_7 {
 				.take(10)
 				.foreach(println)
 
-			joined.unpersist()
-
 			println()
 			println("***************")
 			println()
@@ -106,12 +104,10 @@ object exercise_7 {
 			val ordersDF = orders
 				.toDF("id","date")
 				.cache()
-			orders.unpersist()
 
 			val orderItemsDF = orderItems
 				.toDF("id","subtotal")
 				.cache()
-			orderItems.unpersist()
 
 			ordersDF.createOrReplaceTempView("o")
 			orderItemsDF.createOrReplaceTempView("oi")
@@ -122,9 +118,6 @@ object exercise_7 {
 						|FROM o JOIN oi ON(o.id = oi.id) """.stripMargin)
 				.cache()
 
-			ordersDF.unpersist()
-			orderItemsDF.unpersist()
-
 			joinedDF.createOrReplaceTempView("j")
 
 			val distinctIdDate = sqlContext
@@ -132,8 +125,6 @@ object exercise_7 {
   				"""SELECT date, id
 						|FROM j  GROUP BY date, id """.stripMargin)
   				.cache()
-
-			joined.unpersist()
 
 			distinctIdDate.createOrReplaceTempView("dd")
 
@@ -144,8 +135,6 @@ object exercise_7 {
 						|GROUP BY date
 						|ORDER BY date""".stripMargin)
 				.show(10)
-
-			distinctIdDate.unpersist()
 
 			// To have the opportunity to view the web console of Spark: http://localhost:4040/
 			println("Type whatever to the console to exit......")
