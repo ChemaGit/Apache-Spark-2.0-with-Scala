@@ -90,10 +90,6 @@ object exercise_9 {
         .map(r => "%s,%s,%s,%s".format(r(0).toString,r(1).toString,r(2).toString,r(3).toString))
         .saveAsTextFile(output)
 
-      techDF.unpersist()
-      salaryDF.unpersist()
-      result.unpersist()
-
       // To have the opportunity to view the web console of Spark: http://localhost:4040/
       println("Type whatever to the console to exit......")
       scala.io.StdIn.readLine()

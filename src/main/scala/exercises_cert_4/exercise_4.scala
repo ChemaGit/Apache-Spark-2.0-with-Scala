@@ -78,9 +78,6 @@ object exercise_4 {
 
       bigramsCount.saveAsTextFile(output)
 
-      bigrams.unpersist()
-      bigramsCount.unpersist()
-
       /**
         * check the results
         * $ hdfs dfs -cat /user/cloudera/bigrams/result/part*
