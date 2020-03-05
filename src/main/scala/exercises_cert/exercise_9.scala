@@ -69,8 +69,6 @@ object exercise_9 {
         .sortBy(t => t._2, false)
         .saveAsTextFile(output, classOf[org.apache.hadoop.io.compress.GzipCodec])
 
-      filtered.unpersist()
-
       // check out the results
       // hdfs dfs -ls /user/cloudera/exercise_9
       // hdfs dfs -text /user/cloudera/exercise_9/part-00000.gz
