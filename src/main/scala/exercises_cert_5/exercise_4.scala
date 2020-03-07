@@ -1,7 +1,5 @@
 package exercises_cert_5
 
-import org.apache.spark.sql.SparkSession
-
 /** Question 82
   * Problem Scenario 40 : You have been given sample data as below in a file called /home/cloudera/files/file222.txt
   * 3070811,1963,1096,,"US","CA",,1,
@@ -19,28 +17,46 @@ import org.apache.spark.sql.SparkSession
   * $ hdfs dfs -put /home/cloudera/file222.txt /user/cloudera/files/
   */
 
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
+
 object exercise_4 {
 
-  lazy val spark = SparkSession
+  val spark = SparkSession
     .builder()
-    .appName("exercise 4")
+    .appName("exercise_4")
     .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_4")  // To silence Metrics warning
     .getOrCreate()
 
-  lazy val sc = spark.sparkContext
+  val sc = spark.sparkContext
+
+  val intput = "hdfs://quickstart.cloudera/user/cloudera/files/file222.txt"
 
   def main(args: Array[String]): Unit = {
-    sc.setLogLevel("ERROR")
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
-    val field= sc.textFile("hdfs://quickstart.cloudera/user/cloudera/files/file222.txt")
-    val mapper = field.map(x => x.split(","))
-    val result = mapper
-      .map(x => x.map(x => {if(x.isEmpty || x == "" || x == " ") 0 else x}))
-      .collect
+    try {
+      val field= sc.textFile(intput)
+      val mapper = field
+        .map(x => x.split(","))
+        .cache()
 
-    result.foreach(x => println(x.mkString(",")))
+      val result = mapper
+        .map(x => x.map(x => {if(x.isEmpty || x == "" || x == " ") 0 else x}))
+        .collect
 
-    sc.stop()
-    spark.stop()
+      result.foreach(x => println(x.mkString(",")))
+
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
 }

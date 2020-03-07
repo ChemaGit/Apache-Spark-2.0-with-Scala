@@ -1,8 +1,5 @@
 package exercises_cert_5
 
-import org.apache.spark.sql.SparkSession
-
-
 /** Question 86
   * Problem Scenario 44 : You have been given 4 files , with the content as given below:
   * spark11/file_1.txt
@@ -31,62 +28,80 @@ import org.apache.spark.sql.SparkSession
   * (spark11/file_4.txt)
   * Write a Spark program, which will give you the highest occurring words in each file. With their file name and highest occurring words.
   */
+
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
+
 object exercise_6 {
 
-  lazy val spark = SparkSession
+  val spark = SparkSession
     .builder()
-    .appName("exercise 6")
+    .appName("exercise_6")
     .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_6")  // To silence Metrics warning
     .getOrCreate()
 
-  lazy val sc = spark.sparkContext
+  val sc = spark.sparkContext
+
+  val path = "hdfs://quickstart.cloudera/user/cloudera/files/"
+
+  val output = "hdfs://quickstart.cloudera/user/cloudera/exercises/question_86"
 
   def main(args: Array[String]): Unit = {
-    sc.setLogLevel("ERROR")
 
-    val n1 = "file_1.txt ==> "
-    val n2 = "file_2.txt ==> "
-    val n3 = "file_3.txt ==> "
-    val n4 = "file_4.txt ==> "
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
-    val file1 = sc
-        .textFile("hdfs://quickstart.cloudera/user/cloudera/files/file_1.txt")
+    try {
+      val n1 = "file_1.txt ==> "
+      val n2 = "file_2.txt ==> "
+      val n3 = "file_3.txt ==> "
+      val n4 = "file_4.txt ==> "
+
+      val file1 = sc
+        .textFile(s"${path}file_1.txt")
         .flatMap(line => line.split("\\W"))
         .filter(w => !w.isEmpty)
         .map(w => (w, 1))
         .reduceByKey( (v,c) => v + c)
         .sortBy(t => t._2, false)
 
-    val file2 = sc
-      .textFile("hdfs://quickstart.cloudera/user/cloudera/files/file_2.txt")
-      .flatMap(line => line.split("\\W"))
-      .filter(w => !w.isEmpty)
-      .map(w => (w, 1))
-      .reduceByKey( (v,c) => v + c)
-      .sortBy(t => t._2, false)
+      val file2 = sc
+        .textFile(s"${path}file_2.txt")
+        .flatMap(line => line.split("\\W"))
+        .filter(w => !w.isEmpty)
+        .map(w => (w, 1))
+        .reduceByKey( (v,c) => v + c)
+        .sortBy(t => t._2, false)
 
-    val file3 = sc
-      .textFile("hdfs://quickstart.cloudera/user/cloudera/files/file_3.txt")
-      .flatMap(line => line.split("\\W"))
-      .filter(w => !w.isEmpty)
-      .map(w => (w, 1))
-      .reduceByKey( (v,c) => v + c)
-      .sortBy(t => t._2, false)
+      val file3 = sc
+        .textFile(s"${path}file_3.txt")
+        .flatMap(line => line.split("\\W"))
+        .filter(w => !w.isEmpty)
+        .map(w => (w, 1))
+        .reduceByKey( (v,c) => v + c)
+        .sortBy(t => t._2, false)
 
-    val file4 = sc
-      .textFile("hdfs://quickstart.cloudera/user/cloudera/files/file_4.txt")
-      .flatMap(line => line.split("\\W"))
-      .filter(w => !w.isEmpty)
-      .map(w => (w, 1))
-      .reduceByKey( (v,c) => v + c)
-      .sortBy(t => t._2, false)
+      val file4 = sc
+        .textFile(s"${path}file_4.txt")
+        .flatMap(line => line.split("\\W"))
+        .filter(w => !w.isEmpty)
+        .map(w => (w, 1))
+        .reduceByKey( (v,c) => v + c)
+        .sortBy(t => t._2, false)
 
-    val lHighestWords = sc
+      val lHighestWords = sc
         .parallelize(List( (n1,file1.first()), (n2,file2.first()), (n3,file3.first()), (n4,file4.first()) ))
-        .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/exercises/question_86")
+        .saveAsTextFile(output)
 
-    sc.stop()
-    spark.stop()
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
-
 }

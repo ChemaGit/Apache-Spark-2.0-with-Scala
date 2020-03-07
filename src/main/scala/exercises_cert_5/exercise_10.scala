@@ -1,6 +1,8 @@
 package exercises_cert_5
 
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types.{DoubleType, IntegerType, StringType, StructField, StructType}
 
 /** Question 94
   * Problem Scenario 78 : You have been given MySQL DB with following details.
@@ -43,84 +45,116 @@ import org.apache.spark.sql.SparkSession
 
 object exercise_10 {
 
-  lazy val spark = SparkSession
+  val spark = SparkSession
     .builder()
-    .appName("exercise 10")
+    .appName("exercise_10")
     .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_10")  // To silence Metrics warning
     .getOrCreate()
 
-  lazy val sc = spark.sparkContext
+  val sc = spark.sparkContext
+
+  val sqlContext = spark.sqlContext
+
+  val path = "hdfs://quickstart.cloudera/user/cloudera/tables/"
 
   def main(args: Array[String]): Unit = {
-    sc.setLogLevel("ERROR")
 
-    // USING RDD
-    val ordersRdd = sc
-        .textFile("hdfs://quickstart.cloudera/user/cloudera/tables/orders/")
+    Logger.getRootLogger.setLevel(Level.ERROR)
+
+    try {
+      // USING RDD
+      val ordersRdd = sc
+        .textFile(s"${path}orders/")
         .map(line => line.split(","))
         .map(arr => (arr(0).toInt, (arr(1), arr(2).toInt)))
 
-    val orderItemsRdd = sc
-        .textFile("hdfs://quickstart.cloudera/user/cloudera/tables/order_items/")
+      val orderItemsRdd = sc
+        .textFile(s"${path}order_items/")
         .map(line => line.split(","))
         .map(arr => (arr(1).toInt, arr(4).toDouble))
 
-    val joinedRdd = ordersRdd
+      val joinedRdd = ordersRdd
         .join(orderItemsRdd)
-        .persist()
+        .cache()
 
-    // 3. Calculate total revenue perday and per customer
-    // (Int, ((String, Int), Double))
+      // 3. Calculate total revenue perday and per customer
+      // (Int, ((String, Int), Double))
 
-    val revenuePerdayCustomer = joinedRdd
+      val revenuePerdayCustomer = joinedRdd
         .map({case( (id,((date,cust), revenue)) ) => ( (date, cust), revenue)})
         .reduceByKey( (v, c) => v + c)
         .sortBy(t => t._2, false)
 
-    revenuePerdayCustomer
-      .take(25)
-      .foreach(println)
+      revenuePerdayCustomer
+        .take(25)
+        .foreach(println)
 
-    // 4. Calculate maximum revenue per customer
-    val maxRevenueCustomer = joinedRdd
+      // 4. Calculate maximum revenue per customer
+      val maxRevenueCustomer = joinedRdd
         .map({case( (id,((date,cust), revenue)) ) => (cust, revenue)})
         .reduceByKey( (v, c) => v + c)
         .sortBy(t => t._2, false)
         .first()
 
-    println(s"Maximum revenue per customer: $maxRevenueCustomer")
+      println(s"Maximum revenue per customer: $maxRevenueCustomer")
 
-    // USING DATAFRAMES
-    import spark.implicits._
-    val ordersDF = sc
-        .textFile("hdfs://quickstart.cloudera/user/cloudera/tables/orders/")
-        .map(line => line.split(","))
-        .map(arr => (arr(0).toInt, arr(1), arr(2).toInt))
-        .toDF("idOrder", "date", "custId")
+      // USING DATAFRAMES
 
-    val itemOrdersDF = sc
-        .textFile("hdfs://quickstart.cloudera/user/cloudera/tables/order_items/")
-        .map(line => line.split(","))
-        .map(arr => (arr(1).toInt, arr(4).toDouble))
-        .toDF("idOrderIt", "revenue")
+      val ordersSchema = StructType(List(StructField("order_id", IntegerType, false), StructField("order_date",StringType, false),
+        StructField("order_customer_id", IntegerType, false), StructField("order_status",StringType, false)))
+      //(order_item_td , order_item_order_id , order_item_product_id, order_item_quantity,order_item_subtotal,order_item_product_price)
+      val orderItemsSchema = StructType(List(StructField("item_id", IntegerType, false), StructField("item_order_id",IntegerType, false),
+        StructField("item_product_id", IntegerType, false), StructField("item_quantity",IntegerType, false),
+        StructField("item_subtotal",DoubleType, false), StructField("item_price",DoubleType, false)))
 
-    ordersDF.createOrReplaceTempView("orders")
-    itemOrdersDF.createOrReplaceTempView("item_orders")
+      val ordersDF = sqlContext
+        .read
+        .schema(ordersSchema)
+        .option("header", false)
+        .option("sep",",")
+        .csv(s"${path}orders/")
+        .cache()
 
-    // 3. Calculate total revenue perday and per customer
-    spark
-        .sqlContext
-        .sql("""SELECT date, custId, ROUND(SUM(revenue),2) AS Total_Revenue FROM orders JOIN item_orders ON(idOrder = idOrderIt) GROUP BY date, custId ORDER BY Total_Revenue DESC""")
+      val itemOrdersDF = sqlContext
+        .read
+        .schema(orderItemsSchema)
+        .option("header", false)
+        .option("sep",",")
+        .csv(s"${path}order_items/")
+        .cache()
+
+      ordersDF.createOrReplaceTempView("orders")
+      itemOrdersDF.createOrReplaceTempView("item_orders")
+
+      // 3. Calculate total revenue perday and per customer
+      sqlContext
+        .sql(
+          """SELECT order_date, order_customer_id, ROUND(SUM(item_subtotal),2) AS Total_Revenue
+            |FROM orders JOIN item_orders ON(order_id = item_order_id)
+            |GROUP BY order_date, order_customer_id
+            |ORDER BY Total_Revenue DESC""".stripMargin)
         .show()
 
-    // 4. Calculate maximum revenue per customer
-    spark
-        .sqlContext
-        .sql("""SELECT custId, ROUND(SUM(revenue), 2) AS Max_Revenue_Customer FROM orders JOIN item_orders ON(idOrder = idOrderIt) GROUP BY custId ORDER BY Max_Revenue_Customer DESC LIMIT 1""")
+      // 4. Calculate maximum revenue per customer
+      sqlContext
+        .sql(
+          """SELECT order_customer_id, ROUND(SUM(item_subtotal), 2) AS Max_Revenue_Customer
+            |FROM orders JOIN item_orders ON(order_id = item_order_id)
+            |GROUP BY order_customer_id
+            |ORDER BY Max_Revenue_Customer DESC LIMIT 1""".stripMargin)
         .show()
 
-    sc.stop()
-    spark.stop()
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
 
 }

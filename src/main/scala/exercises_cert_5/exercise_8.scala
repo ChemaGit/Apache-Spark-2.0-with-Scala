@@ -1,14 +1,12 @@
 package exercises_cert_5
 
-import org.apache.spark.sql.SparkSession
-
 /** Question 91
   * Problem Scenario 82 : You have been given table in Hive(pruebas.t_product_parquet) with following structure (Which you have created in previous exercise).
-*productid           	int
-*productcode         	string
-*name                	string
-*quantity            	int
-*price               	float
+  *productid           	int
+  *productcode         	string
+  *name                	string
+  *quantity            	int
+  *price               	float
   *
   * productID,productCode,name,quantity,price
   * 1001,PEN,Pen Red,5000,1.23,501
@@ -33,61 +31,78 @@ import org.apache.spark.sql.SparkSession
   * $ hdfs dfs -put /home/cloudera/files/product.csv /user/cloudera/files/product.csv
   */
 
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
+
 object exercise_8 {
 
   val spark = SparkSession
     .builder()
-    .appName("exercise 8")
+    .appName("exercise_8")
     .master("local[*]")
-    .enableHiveSupport()
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_8")  // To silence Metrics warning
     .getOrCreate()
 
   val sc = spark.sparkContext
 
+  val sqlContext = spark.sqlContext
+
+  val path = "hdfs://quickstart.cloudera/user/cloudera/files/"
+
   case class Product(productID: Int,productCode: String,name: String,quantity: Int,price: Double)
 
   def main(args: Array[String]): Unit = {
-    sc.setLogLevel("ERROR")
 
-    import spark.implicits._
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
-    val productRdd = sc
-        .textFile("hdfs://quickstart.cloudera/user/cloudera/files/product.csv")
+    try {
+      import spark.implicits._
+
+      val productRdd = sc
+        .textFile(s"${path}product.csv")
         .map(line => line.split(","))
-        .filter(arr => !arr(0).equals("productID"))
+        .filter(arr => arr(0).equals("productID") == false)
         .map(arr => new Product(arr(0).toInt, arr(1),arr(2),arr(3).toInt,arr(4).toDouble))
         .toDF("productID","productCode","name","quantity","price")
-        .persist()
+        .cache()
 
-    productRdd.show()
+      productRdd.show()
 
-    productRdd.createOrReplaceTempView("products")
+      productRdd.createOrReplaceTempView("products")
 
-    // 1. Select all the products name and quantity having quantity <= 2000
-    spark
+      // 1. Select all the products name and quantity having quantity <= 2000
+      spark
         .sqlContext
         .sql("""SELECT name, quantity FROM products WHERE quantity <= 2000""")
         .show()
 
-    // 2. Select name and price of the product having code as 'PEN'
-    spark
+      // 2. Select name and price of the product having code as 'PEN'
+      spark
         .sqlContext
         .sql("""SELECT name, price FROM products WHERE productCode = 'PEN' """)
         .show()
 
-    // 3. Select all the products, which name starts with Pencil
-    spark
+      // 3. Select all the products, which name starts with Pencil
+      spark
         .sqlContext
         .sql("""SELECT * FROM products WHERE name LIKE("Pencil%") """)
         .show()
 
-    // 4. Select all products which "name" begins with 'P' followed by any two characters, followed by space, followed by zero or more characters
-    spark
+      // 4. Select all products which "name" begins with 'P' followed by any two characters, followed by space, followed by zero or more characters
+      spark
         .sqlContext
         .sql("""SELECT * FROM products WHERE name LIKE("P__ %")""")
         .show()
 
-    sc.stop()
-    spark.stop()
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
 }

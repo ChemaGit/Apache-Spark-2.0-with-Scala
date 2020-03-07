@@ -1,7 +1,5 @@
 package exercises_cert_5
 
-import org.apache.spark.sql.SparkSession
-
 /** Question 84
   * Problem Scenario 33 : You have given a files as below.
   * spark5/EmployeeName.csv (id,name)
@@ -38,43 +36,62 @@ import org.apache.spark.sql.SparkSession
   * $ hdfs dfs -put /home/cloudera/files/EmployeeSalary.csv /user/cloudera/files
   */
 
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
 
 object exercise_5 {
 
-  lazy val spark = SparkSession
+  val spark = SparkSession
     .builder()
-    .appName("exercise 5")
+    .appName("exercise_5")
     .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_5")  // To silence Metrics warning
     .getOrCreate()
 
-  lazy val sc = spark.sparkContext
+  val sc = spark.sparkContext
+
+  val path = "hdfs://quickstart.cloudera/user/cloudera/files/"
+
+  val output = "hdfs://quickstart.cloudera/user/cloudera/exercises/question_84/salary_"
 
   def main(args: Array[String]): Unit = {
-    sc.setLogLevel("ERROR")
 
-    val emp = sc
-        .textFile("hdfs://quickstart.cloudera/user/cloudera/files/EmployeeName.csv")
+    Logger.getRootLogger.setLevel(Level.ERROR)
+
+    try {
+      val emp = sc
+        .textFile(s"${path}EmployeeName.csv")
         .map(line => line.split(","))
         .map(arr => (arr(0),arr(1)))
+        .cache()
 
-    val salary = sc
-        .textFile("hdfs://quickstart.cloudera/user/cloudera/files/EmployeeSalary.csv")
+      val salary = sc
+        .textFile(s"${path}EmployeeSalary.csv")
         .map(line => line.split(","))
         .map(arr => (arr(0), arr(1)))
+        .cache()
 
-    val joined = salary
+      val joined = salary
         .join(emp)
         .map({case( (id,(sal, name)) ) => (sal, name)})
         .groupByKey()
 
-    joined.foreach({
-      case(s, n) => sc
-      .makeRDD(n.toList)
-      .saveAsTextFile(s"hdfs://quickstart.cloudera/user/cloudera/exercises/question_84/salary_$s")
-    })
+      joined.foreach({
+        case(s, n) => sc
+          .makeRDD(n.toList)
+          .saveAsTextFile(s"$output$s")
+      })
 
-    sc.stop()
-    spark.stop()
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
 
 }
