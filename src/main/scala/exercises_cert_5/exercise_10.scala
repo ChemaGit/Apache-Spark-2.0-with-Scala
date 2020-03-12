@@ -1,9 +1,5 @@
 package exercises_cert_5
 
-import org.apache.log4j.{Level, Logger}
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.types.{DoubleType, IntegerType, StringType, StructField, StructType}
-
 /** Question 94
   * Problem Scenario 78 : You have been given MySQL DB with following details.
   * user=retail_dba
@@ -42,6 +38,10 @@ import org.apache.spark.sql.types.{DoubleType, IntegerType, StringType, StructFi
   * --outdir /home/cloudera/outdir \
   * --bindir /home/cloudera/bindir
   */
+
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types.{DoubleType, IntegerType, StringType, StructField, StructType}
 
 object exercise_10 {
 
@@ -156,5 +156,4 @@ object exercise_10 {
       println("SparkSession stopped.")
     }
   }
-
 }
