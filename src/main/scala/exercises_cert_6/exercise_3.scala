@@ -1,8 +1,5 @@
 package exercises_cert_6
 
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions._
-
 /**
 Problem 1:
 1.Using sqoop, import orders table into hdfs to folders /user/cloudera/problem1/orders. File should be loaded as Avro File and use snappy compression
@@ -63,23 +60,35 @@ $ sqoop import \
 $ hdfs dfs -ls /user/cloudera/problem1/order-items
 $ hdfs dfs -text /user/cloudera/problem1/order-items/part-m-00000.avro | head -n 10
 $ avro-tools getmeta hdfs://quickstart.cloudera/user/cloudera/problem1/order-items/part-m-00000.avro
+*/
 
-  */
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions._
+
+
 
 object exercise_3 {
 
-  lazy val spark = SparkSession
+  val spark = SparkSession
     .builder()
-    .appName("exercise 3")
+    .appName("exercise_3")
     .master("local[*]")
     .enableHiveSupport()
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_3") // To silence Metrics warning
     .getOrCreate()
 
-  lazy val sc = spark.sparkContext
+  val sc = spark.sparkContext
+
+  val inputpath = "hdfs://quickstart.cloudera/user/cloudera/problem1/"
+  val output = "hdfs://quickstart.cloudera/user/cloudera/problem1/"
 
   def main(args: Array[String]): Unit = {
+
     try {
-      sc.setLogLevel("ERROR")
+
+      Logger.getRootLogger.setLevel(Level.ERROR)
 
       // 3.Using Spark Scala load data at /user/cloudera/problem1/orders and /user/cloudera/problem1/orders-items items as dataframes.
       import com.databricks.spark.avro._
@@ -87,12 +96,12 @@ object exercise_3 {
       val ordersDF = spark
         .sqlContext
         .read
-        .avro("hdfs://quickstart.cloudera/user/cloudera/problem1/orders/")
+        .avro(s"${inputpath}orders/")
 
       val orderItemsDF = spark
         .sqlContext
         .read
-        .avro("hdfs://quickstart.cloudera/user/cloudera/problem1/order-items/")
+        .avro(s"${inputpath}order-items/")
 
       import spark.implicits._
 
@@ -102,7 +111,7 @@ object exercise_3 {
       //  a). Just by using Data Frames API - here order_date should be YYYY-MM-DD format
       val joined = ordersDF
         .join(orderItemsDF, $"order_id" === $"order_item_order_id", "inner")
-        .persist()
+        .cache()
 
       val resultDF = joined
         .groupBy(col("order_date"), col("order_status"))
@@ -114,7 +123,12 @@ object exercise_3 {
       joined.createOrReplaceTempView("joined")
       val resultSQL = spark
         .sqlContext
-        .sql("""SELECT from_unixtime(order_date / 1000, "yyyy-MM-dd") AS order_date, order_status, COUNT(DISTINCT(order_id)) AS total_orders, ROUND(SUM(order_item_subtotal),2) AS total_amount FROM joined GROUP BY order_date, order_status ORDER BY order_date DESC,order_status ASC,total_amount DESC,total_orders ASC""")
+        .sql(
+          """SELECT from_unixtime(order_date / 1000, "yyyy-MM-dd") AS order_date, order_status,
+            |COUNT(DISTINCT(order_id)) AS total_orders, ROUND(SUM(order_item_subtotal),2) AS total_amount
+            |FROM joined
+            |GROUP BY order_date, order_status
+            |ORDER BY order_date DESC,order_status ASC,total_amount DESC,total_orders ASC""".stripMargin)
 
       //  c). By using combineByKey function on RDDS -- No need of formatting order_date or total_amount
       val resultRDD = joined
@@ -129,39 +143,39 @@ object exercise_3 {
       // 5.Store the result as parquet file into hdfs using gzip compression under folder
       spark.sqlContext.setConf("spark.sql.parquet.compression.codec", "gzip")
       // /user/cloudera/problem1/result4a-gzip
-      resultDF.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4a-gzip")
+      resultDF.write.parquet(s"${output}result4a-gzip")
       // /user/cloudera/problem1/result4b-gzip
-      resultSQL.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4b-gzip")
+      resultSQL.write.parquet(s"${output}result4b-gzip")
       // /user/cloudera/problem1/result4c-gzip
-      resultRDD.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4c-gzip")
+      resultRDD.write.parquet(s"${output}result4c-gzip")
 
       // 6.Store the result as parquet file into hdfs using snappy compression under folder
       spark
         .sqlContext
         .setConf("spark.sql.parquet.compression.codec", "snappy")
       // /user/cloudera/problem1/result4a-snappy
-      resultDF.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4a-snappy")
+      resultDF.write.parquet(s"${output}result4a-snappy")
       // /user/cloudera/problem1/result4b-snappy
-      resultSQL.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4b-snappy")
+      resultSQL.write.parquet(s"${output}result4b-snappy")
       // /user/cloudera/problem1/result4c-snappy
-      resultRDD.write.parquet("hdfs://quickstart.cloudera/user/cloudera/problem1/result4c-snappy")
+      resultRDD.write.parquet(s"${output}result4c-snappy")
 
       // 7.Store the result as CSV file into hdfs using No compression under folder
       // /user/cloudera/problem1/result4a-csv
       resultDF
         .rdd
         .map(r => r.mkString(","))
-        .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem1/result4a-csv")
+        .saveAsTextFile(s"${output}result4a-csv")
       // /user/cloudera/problem1/result4b-csv
       resultSQL
         .rdd
         .map(r => r.mkString(","))
-        .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem1/result4b-csv")
+        .saveAsTextFile(s"${output}result4b-csv")
       // /user/cloudera/problem1/result4c-csv
       resultRDD
         .rdd
         .map(r => r.mkString(","))
-        .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/problem1/result4c-csv")
+        .saveAsTextFile(s"${output}result4c-csv")
 
       // 8.create a mysql table named result and load data from /user/cloudera/problem1/result4a-csv to mysql table named result
       /* Using Sqoop
@@ -200,12 +214,15 @@ object exercise_3 {
       /*
       $ hive
       hive> use hadoopexam;
-      hive> hive> CREATE TABLE result_hive(order_date string,order_status string,total_orders bigint,total_amount double) STORED AS PARQUET LOCATION '/user/cloudera/problem1/result4a-snappy' TBLPROPERTIES("parquet.compression"="snappy");
+      hive> hive> CREATE TABLE result_hive(order_date string,order_status string,total_orders bigint,total_amount double)
+                  STORED AS PARQUET
+                  LOCATION '/user/cloudera/problem1/result4a-snappy'
+                  TBLPROPERTIES("parquet.compression"="snappy");
       hive> select * from result_hive limit 10;
        */
 
 
-      // To have the opportunity to view the web console of Spark: http://localhost:4041/
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
       println("Type whatever to the console to exit......")
       scala.io.StdIn.readLine()
     } finally {

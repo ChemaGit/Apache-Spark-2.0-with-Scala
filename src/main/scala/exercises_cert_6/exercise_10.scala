@@ -1,8 +1,5 @@
 package exercises_cert_6
 
-import org.apache.spark.sql.SparkSession
-import org.apache.log4j.{Level, Logger}
-
 /**
   * Question 3: Correct
   * PreRequiste:
@@ -29,11 +26,14 @@ import org.apache.log4j.{Level, Logger}
   * Output file should be saved as Parquet file in Snappy Compression.
   */
 
+import org.apache.spark.sql.SparkSession
+import org.apache.log4j.{Level, Logger}
+
 object exercise_10 {
 
   val spark = SparkSession
     .builder()
-    .appName("exercise 10")
+    .appName("exercise_10")
     .master("local[*]")
     .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
     .config("spark.app.id", "exercise_10")  // To silence Metrics warning
@@ -48,8 +48,10 @@ object exercise_10 {
 
     val pathIn = "hdfs://quickstart.cloudera/user/cloudera/problem2/avro"
     val pathOut = "hdfs://quickstart.cloudera/user/cloudera/problem2/parquet"
+
     try {
       import com.databricks.spark.avro._
+
       val ordersDF = sqlContext
           .read
           .avro(pathIn)
@@ -69,7 +71,7 @@ object exercise_10 {
 //      $ parquet-tools meta hdfs://quickstart.cloudera/user/cloudera/problem2/parquet-snappy/part-r-00000-c98c1300-857d-40ea-bda4-92b24b7ea937.snappy.parquet
 //      $ parquet-tools head hdfs://quickstart.cloudera/user/cloudera/problem2/parquet-snappy/part-r-00000-c98c1300-857d-40ea-bda4-92b24b7ea937.snappy.parquet
 
-      // To have the opportunity to view the web console of Spark: http://localhost:4041/
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
       println("Type whatever to the console to exit......")
       scala.io.StdIn.readLine()
     } finally {

@@ -1,7 +1,5 @@
 package exercises_cert_6
 
-import org.apache.spark.sql.SparkSession
-
 /** Question 97
   * Use retail_db data set
   *
@@ -17,6 +15,9 @@ import org.apache.spark.sql.SparkSession
   * Local location /home/cloudera/daily_revenue_scala
   * Solution need to be stored under /home/cloudera/daily_revenue_scala
   */
+
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
 
 /*
 sqoop import \
@@ -51,47 +52,53 @@ sqoop import \
  */
 object exercise_4 {
 
-  lazy val spark = SparkSession
+  val spark = SparkSession
     .builder()
     .appName("exercise_4")
     .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_4")  // To silence Metrics warning
     .getOrCreate()
 
-  lazy val sc = spark.sparkContext
+  val sc = spark.sparkContext
 
   case class Orders(order_id: Int, order_date: String)
   case class OrderItems(order_item_order_id: Int, order_item_product_id: Int, order_item_subtotal: Double)
   case class Products(product_id: Int, product_name: String)
 
+  val bList = sc.broadcast(List("COMPLETE", "CLOSED"))
+
+  val input = "hdfs://quickstart.cloudera/public/retail_db/"
+  val output = "hdfs://quickstart.cloudera/user/cloudera/question97/"
+
   def main(args: Array[String]): Unit = {
     try {
-      sc.setLogLevel("ERROR")
+
+      Logger.getRootLogger.setLevel(Level.ERROR)
 
       import spark.implicits._
 
-      val bList = sc.broadcast(List("COMPLETE", "CLOSED"))
-
       val ordersDF = sc
-        .textFile("hdfs://quickstart.cloudera/public/retail_db/orders")
+        .textFile(s"${input}orders")
         .map(line => line.split(","))
         .filter(r => bList.value.contains(r(3)))
         .map(arr => Orders(arr(0).toInt, arr(1).substring(0, 10)))
         .toDF()
-        .persist()
+        .cache()
 
       val orderItemsDF = sc
-        .textFile("hdfs://quickstart.cloudera/public/retail_db/order_items")
+        .textFile(s"${input}order_items")
         .map(line => line.split(","))
         .map(arr => OrderItems(arr(1).toInt, arr(2).toInt, arr(4).toDouble))
         .toDF()
-        .persist()
+        .cache()
 
       val productsDF = sc
-        .textFile("hdfs://quickstart.cloudera/public/retail_db/products")
+        .textFile(s"${input}products")
         .map(line => line.split(","))
         .map(arr => Products(arr(0).toInt, arr(2)))
         .toDF()
-        .persist()
+        .cache()
 
       ordersDF.createOrReplaceTempView("orders")
       orderItemsDF.createOrReplaceTempView("order_items")
@@ -100,10 +107,13 @@ object exercise_4 {
       val result = spark
         .sqlContext
         .sql(
-          """SELECT product_id, product_name,order_date,ROUND(SUM(order_item_subtotal),2) AS daily_revenue FROM orders JOIN order_items ON(order_id = order_item_order_id)
-            | JOIN products ON(order_item_product_id = product_id) GROUP BY product_id,product_name,order_date ORDER BY order_date ASC,daily_revenue DESC """.stripMargin)
+          """SELECT product_id, product_name,order_date,ROUND(SUM(order_item_subtotal),2) AS daily_revenue
+            |FROM orders JOIN order_items ON(order_id = order_item_order_id) JOIN products ON(order_item_product_id = product_id)
+            | GROUP BY product_id,product_name,order_date
+            | ORDER BY order_date ASC,daily_revenue DESC """.stripMargin)
+        .cache()
 
-      // result.show(10)
+      result.show(10)
 
       /*Final output need to be stored under
       HDFS location-avro format /user/cloudera/question97/daily_revenue_avro
@@ -113,12 +123,13 @@ object exercise_4 {
       import com.databricks.spark.avro._
       result
         .write
-        .avro("hdfs://quickstart.cloudera/user/cloudera/question97/daily_revenue_avro")
+        .avro(s"${output}daily_revenue_avro")
 
       result
-        .rdd
-        .map(r => r.mkString(","))
-        .saveAsTextFile("hdfs://quickstart.cloudera/user/cloudera/question97/daily_revenue_txt")
+          .write
+          .option("sep",",")
+          .option("header", false)
+          .csv(s"${output}daily_revenue_txt")
 
       println("Type whatever to the console to exit......")
       scala.io.StdIn.readLine()

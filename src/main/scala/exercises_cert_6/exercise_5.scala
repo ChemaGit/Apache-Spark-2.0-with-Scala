@@ -1,16 +1,17 @@
 package exercises_cert_6
 
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.SparkSession
-
-import scala.util.{Failure, Success, Try}
-
 /** Question 98
   *   	- Task 1: Get revenue for given order_item_order_id
   *       	- Define function getOrderRevenue with 2 arguments order_items and order_id
   *       	- Use map reduce APIs to filter order items for given order id, to extract order_item_subtotal and add it to get revenue
   *       	- Return order revenue
   */
+
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.SparkSession
+
+import scala.util.{Failure, Success, Try}
 
 /*
 +--------------------------+------------+------+-----+---------+----------------+
@@ -37,13 +38,15 @@ sqoop import \
 
 object exercise_5 {
 
-  lazy val spark = SparkSession
+  val spark = SparkSession
     .builder()
-    .appName("exercise 5")
+    .appName("exercise_5")
     .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_5")  // To silence Metrics warning
     .getOrCreate()
 
-  lazy val sc = spark.sparkContext
+  val sc = spark.sparkContext
 
   val inputpath = "hdfs://quickstart.cloudera/public/retail_db/order_items"
 
@@ -62,13 +65,14 @@ object exercise_5 {
   }
 
   def main(args: Array[String]): Unit = {
+
     try {
       println("Introduce an order_id: ")
       val orderId = checkOrderId(scala.io.StdIn.readLine())
       if (orderId > 0) {
         println(s"order_id: $orderId")
 
-        sc.setLogLevel("ERROR")
+        Logger.getRootLogger.setLevel(Level.ERROR)
 
         val order_items = sc
           .textFile(inputpath)
@@ -89,5 +93,4 @@ object exercise_5 {
       println("Stopped SparkSession")
     }
   }
-
 }

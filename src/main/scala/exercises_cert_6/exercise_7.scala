@@ -1,26 +1,27 @@
 package exercises_cert_6
 
-import org.apache.spark.sql.SparkSession
-
 /**
   * Problem 2:
   *1. Using sqoop copy data available in mysql products table to folder /user/cloudera/products on hdfs as text file. columns should be delimited by pipe '|'
-*2. move all the files from /user/cloudera/products folder to /user/cloudera/problem2/products folder
-*3. Change permissions of all the files under /user/cloudera/problem2/products such that owner has read,write and execute permissions,
+  *2. move all the files from /user/cloudera/products folder to /user/cloudera/problem2/products folder
+  *3. Change permissions of all the files under /user/cloudera/problem2/products such that owner has read,write and execute permissions,
   *group has read and write permissions whereas others have just read and execute permissions
-*4. read data in /user/cloudera/problem2/products and do the following operations using a) dataframes api b) spark sql c) RDDs aggregateByKey method.
-   *Your solution should have three sets of steps.
-   *Sort the resultant dataset by category id
-	*- filter such that your RDD\DF has products whose price is lesser than 100 USD
-	*- on the filtered data set find out the higest value in the product_price column under each category
-	*- on the filtered data set also find out total products under each category
-	*- on the filtered data set also find out the average price of the product under each category
-	*- on the filtered data set also find out the minimum price of the product under each category
-*5. store the result in avro file using snappy compression under these folders respectively
-	*- /user/cloudera/problem2/products/result-df
-	*- /user/cloudera/problem2/products/result-sql
-	*- /user/cloudera/problem2/products/result-rdd
+  *4. read data in /user/cloudera/problem2/products and do the following operations using a) dataframes api b) spark sql c) RDDs aggregateByKey method.
+  *Your solution should have three sets of steps.
+  *Sort the resultant dataset by category id
+  *- filter such that your RDD\DF has products whose price is lesser than 100 USD
+  *- on the filtered data set find out the higest value in the product_price column under each category
+  *- on the filtered data set also find out total products under each category
+  *- on the filtered data set also find out the average price of the product under each category
+  *- on the filtered data set also find out the minimum price of the product under each category
+  *5. store the result in avro file using snappy compression under these folders respectively
+  *- /user/cloudera/problem2/products/result-df
+  *- /user/cloudera/problem2/products/result-sql
+  *- /user/cloudera/problem2/products/result-rdd
   */
+
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
 
 /*
 1. Using sqoop copy data available in mysql products table to folder /user/cloudera/products on hdfs as text file. columns should be delimited by pipe '|'
@@ -54,20 +55,18 @@ $ hdfs dfs -ls /user/cloudera/problem2/products
 
 object exercise_7 {
 
-  lazy val spark = SparkSession
+  val spark = SparkSession
     .builder()
-    .appName("exercise 7")
+    .appName("exercise_7")
     .master("local[*]")
     .config("spark.sql.shuffle.partitions","4") // Change to a more reasonable default number of partitions for our data
     .config("spark.app.id", "exercise_7")  // To silence Metrics warning.
     .getOrCreate()
 
-  lazy val sc = spark.sparkContext
+  val sc = spark.sparkContext
 
   val inputpath = "hdfs://quickstart.cloudera/user/cloudera/problem2/products"
-  val outputDf = "hdfs://quickstart.cloudera/user/cloudera/problem2/products/result-df"
-  val outputSql = "hdfs://quickstart.cloudera/user/cloudera/problem2/products/result-sql"
-  val outputRdd = "hdfs://quickstart.cloudera/user/cloudera/problem2/products/result-rdd"
+  val output = "hdfs://quickstart.cloudera/user/cloudera/problem2/products/"
 
   /*
 +---------------------+--------------+------+-----+---------+----------------+
@@ -85,8 +84,10 @@ object exercise_7 {
   case class Products(product_id: Int, product_category_id: Int,product_price: Double)
 
   def main(args: Array[String]): Unit = {
+
+    Logger.getRootLogger.setLevel(Level.ERROR)
+
     try {
-      sc.setLogLevel("ERROR")
 
 //      *4. read data in /user/cloudera/problem2/products and do the following operations using a) dataframes api b) spark sql c) RDDs aggregateByKey method.
 //        *Your solution should have three sets of steps.
@@ -101,13 +102,14 @@ object exercise_7 {
         .map(line => line.split('|'))
         .filter(r => !r(4).isEmpty && r(4) != "")
         .filter(r => r(4).toDouble < 100)
-        .persist
+        .cache
 
       // products.take(10).foreach(x => println(x.mkString(", ")))
 
       // a) dataframes api
       import spark.implicits._
       import org.apache.spark.sql.functions._
+
       val productsDF = products
           .map(r => Products(r(0).toInt, r(1).toInt, r(4).toDouble))
           .toDF
@@ -132,7 +134,7 @@ object exercise_7 {
               |COUNT(product_id) AS total_products,
               |ROUND(AVG(product_price),2) AS avg_price,
               |MIN(product_price) AS min_price FROM products GROUP BY product_category_id ORDER BY product_category_id""".stripMargin)
-      //resultSQL.show()
+      // resultSQL.show()
       // resultSQL.explain(true)
 
       // c) RDDs aggregateByKey method.
@@ -157,15 +159,15 @@ object exercise_7 {
       //   *- /user/cloudera/problem2/products/result-df
       resultDF
           .write
-          .avro("hdfs://quickstart.cloudera/user/cloudera/problem2/products/result-df")
+          .avro(s"${output}result-df")
       //   *- /user/cloudera/problem2/products/result-sql
       resultSQL
           .write
-          .avro("hdfs://quickstart.cloudera/user/cloudera/problem2/products/result-sql")
+          .avro(s"${output}result-sql")
       //   *- /user/cloudera/problem2/products/result-rdd
       resultRDD
           .write
-          .avro("hdfs://quickstart.cloudera/user/cloudera/problem2/products/result-rdd")
+          .avro(s"${output}result-rdd")
 
       // To have the opportunity to view the web console of Spark: http://localhost:4041/
       println("Type whatever to the console to exit......")

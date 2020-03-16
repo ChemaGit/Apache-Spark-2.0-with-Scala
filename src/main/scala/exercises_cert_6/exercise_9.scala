@@ -1,7 +1,5 @@
 package exercises_cert_6
 
-import org.apache.spark.sql.SparkSession
-
 /**
   * /**
   * Problem 6: Provide two solutions for steps 2 to 7
@@ -20,7 +18,7 @@ import org.apache.spark.sql.SparkSession
   * $ beeline -u jdbc:hive2://quickstart.cloudera:10000
   * hive> CREATE DATABASE problem6;
   *
-  $ sqoop import-all-tables \
+$ sqoop import-all-tables \
     --connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
     --username retail_dba \
     --password cloudera \
@@ -32,6 +30,10 @@ import org.apache.spark.sql.SparkSession
     --bindir /home/cloudera/bindir \
     --autoreset-to-one-mapper
   */
+
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
+
 object exercise_9 {
 
   val spark = SparkSession
@@ -49,7 +51,7 @@ object exercise_9 {
 
   def main(args: Array[String]): Unit = {
 
-    sc.setLogLevel("ERROR")
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
     try {
       // 2. On spark shell use data available on meta store as source and perform step 3,4,5 and 6. [this proves your ability to use meta store as a source]
@@ -85,6 +87,7 @@ object exercise_9 {
       val hiveResult3 = hiveResult
           .where("product_price < 100")
           .cache()
+
       hiveResult3.show()
 
       // 6. On dataset from step 4, extract details of products purchased by top 10 customers which are priced at less than 100 USD per unit [this proves you can use subqueries and also filter data]
@@ -100,9 +103,11 @@ object exercise_9 {
       // 7. Store the result of 5 and 6 in new meta store tables within hive. [this proves your ability to use metastore as a sink]
       val path1 = "hdfs://quickstart.cloudera/user/hive/warehouse/problem6.db/hive_result_3"
       val path2 = "hdfs://quickstart.cloudera/user/hive/warehouse/problem6.db/hive_result_4"
+
       hiveResult3
         .write
         .parquet(path1)
+
       hiveResult4
         .write
         .parquet(path2)
@@ -152,5 +157,4 @@ object exercise_9 {
     }
 
   }
-
 }

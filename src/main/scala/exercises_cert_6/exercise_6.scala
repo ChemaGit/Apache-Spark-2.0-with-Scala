@@ -1,14 +1,15 @@
 package exercises_cert_6
 
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.SparkSession
-
 /** Question 99
   *   	- Task 2: Get revenue for each order_item_order_id
   *       	- Define function getRevenuePerOrder with 1 argument order_items
   *       	- Use map reduce APIs to get order_item_order_id and order_item_subtotal, then group by order_item_order_id and then process the values for each order_item_order_id
   *       	- Return a collection which contain order_item_order_id and revenue_per_order_id
   */
+
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.SparkSession
 
 /*
 +--------------------------+------------+------+-----+---------+----------------+
@@ -35,13 +36,17 @@ sqoop import \
 
 object exercise_6 {
 
-  lazy val spark = SparkSession
+  val spark = SparkSession
     .builder()
-    .appName("exercise 6")
+    .appName("exercise_6")
     .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_6")  // To silence Metrics warning
     .getOrCreate()
 
-  lazy val sc = spark.sparkContext
+  // spark.eventLog.enabled=true
+
+  val sc = spark.sparkContext
 
   val inputpath = "hdfs://quickstart.cloudera/public/retail_db/order_items"
 
@@ -54,12 +59,14 @@ object exercise_6 {
 
   def main(args: Array[String]): Unit = {
     try {
-      sc.setLogLevel("ERROR")
+
+      Logger.getRootLogger.setLevel(Level.ERROR)
 
       val order_items = sc
         .textFile(inputpath)
         .map(line => line.split(""","""))
         .map(r => (r(1).toInt,r(4).toDouble))
+        .cache()
 
       val mapOrderIdRevenue = getRevenuePerOrder(order_items)
 

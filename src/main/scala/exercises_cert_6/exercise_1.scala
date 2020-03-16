@@ -1,7 +1,5 @@
 package exercises_cert_6
 
-import org.apache.spark.sql.SparkSession
-
 /** Question 95
   * Problem Scenario 59 : You have been given below code snippet.
   * val x = sc.parallelize(1 to 20)
@@ -12,27 +10,41 @@ import org.apache.spark.sql.SparkSession
   * Array[Int] = Array(16,12, 20,13,17,14,18,10,19,15,11)
   */
 
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
+
 object exercise_1 {
 
-  lazy val spark = SparkSession
+  val spark = SparkSession
     .builder()
-    .appName("exercise 1")
+    .appName("exercise_1")
     .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
+    .config("spark.app.id", "exercise_1")  // To silence Metrics warning
     .getOrCreate()
-  lazy val sc = spark.sparkContext
+
+  val sc = spark.sparkContext
 
   def main(args: Array[String]): Unit = {
-    sc.setLogLevel("ERROR")
 
-    val x = sc.parallelize(1 to 20)
-    val y = sc.parallelize(10 to 30)
+    Logger.getRootLogger.setLevel(Level.ERROR)
 
-    val result = x.intersection(y)
+    try {
+      val x = sc.parallelize(1 to 20)
+      val y = sc.parallelize(10 to 30)
 
-    result.collect.foreach(println)
+      val result = x.intersection(y)
 
-    sc.stop()
-    spark.stop()
+      result.collect.foreach(println)
+
+      // To have the opportunity to view the web console of Spark: http://localhost:4040/
+      println("Type whatever to the console to exit......")
+      scala.io.StdIn.readLine()
+    } finally {
+      sc.stop()
+      println("SparkContext stopped.")
+      spark.stop()
+      println("SparkSession stopped.")
+    }
   }
-
 }
