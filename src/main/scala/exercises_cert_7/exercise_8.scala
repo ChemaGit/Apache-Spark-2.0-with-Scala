@@ -1,42 +1,42 @@
 package exercises_cert_7
 
-import org.apache.log4j.{Level, Logger}
-import org.apache.spark.sql.SparkSession
-
 /**
   * Question 6: Correct
   * PreRequiste:
-*[PreRequiste will not be there in actual exam]
-*Run below sqoop command to import customers table from mysql into hive table customers_hive:
- **
+  *[PreRequiste will not be there in actual exam]
+  *Run below sqoop command to import customers table from mysql into hive table customers_hive:
+  **
  sqoop import \
-*--connect "jdbc:mysql://localhost/retail_db" \
-*--username root \
-*--password cloudera \
-*--table customers \
-*--warehouse-dir /user/cloudera/problem3/customers_hive/input \
-*--hive-import \
-*--create-hive-table \
-*--hive-database default \
-*--hive-table customers_hive
- **
+  *--connect "jdbc:mysql://localhost/retail_db" \
+  *--username root \
+  *--password cloudera \
+  *--table customers \
+  *--warehouse-dir /user/cloudera/problem3/customers_hive/input \
+  *--hive-import \
+  *--create-hive-table \
+  *--hive-database default \
+  *--hive-table customers_hive
+  **
  Instructions:
-*Get Customers from metastore table named "customers_hive" whose fname is like "Rich" and save the results in HDFS in text format.
- **
+  *Get Customers from metastore table named "customers_hive" whose fname is like "Rich" and save the results in HDFS in text format.
+  **
  Output Requirement:
-*Result should be saved in /user/cloudera/practice2/problem4/customers/output as text file. Output should contain only fname, lname and city
-*fname and lname should seperated by tab with city seperated by colon
- **
+  *Result should be saved in /user/cloudera/practice2/problem4/customers/output as text file. Output should contain only fname, lname and city
+  *fname and lname should seperated by tab with city seperated by colon
+  **
  Sample Output
-*Richard Plaza:Francisco
-*Rich Smith:Chicago
-*/
+  *Richard Plaza:Francisco
+  *Rich Smith:Chicago
+  */
+
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
 
 object exercise_8 {
 
   val spark = SparkSession
     .builder()
-    .appName("exercise 8")
+    .appName("exercise_8")
     .master("local[*]")
     .enableHiveSupport()
     .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
@@ -53,10 +53,12 @@ object exercise_8 {
   def main(args: Array[String]): Unit = {
 
     try {
+
       Logger.getRootLogger.setLevel(Level.ERROR)
 
       sqlContext
           .sql("""USE default""")
+
       sqlContext
           .sql(
             s"""CREATE EXTERNAL TABLE IF NOT EXISTS customers_hive(
@@ -103,5 +105,4 @@ object exercise_8 {
       println("SparkSession stopped.")
     }
   }
-
 }

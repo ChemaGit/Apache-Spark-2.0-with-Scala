@@ -1,8 +1,5 @@
 package exercises_cert_7
 
-import org.apache.log4j.{Level, Logger}
-import org.apache.spark.sql.SparkSession
-
 /**
 Question 3: Correct
 PreRequiste:
@@ -25,10 +22,13 @@ Output Requirement:
 Result should be saved in /user/cloudera/problem3/customer/output Output file should be saved in text format.
 */
 
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
+
 object exercise_10 {
   val spark = SparkSession
     .builder()
-    .appName("exercise 10")
+    .appName("exercise_10")
     .master("local[*]")
     .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
     .config("spark.app.id", "exercise_10")  // To silence Metrics warning

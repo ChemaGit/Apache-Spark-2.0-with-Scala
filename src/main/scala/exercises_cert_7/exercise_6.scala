@@ -1,49 +1,48 @@
 package exercises_cert_7
 
-import org.apache.log4j.{Level, Logger}
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.types.{DoubleType, IntegerType, StringType, StructField, StructType}
-
 /**
   * Question 2: Correct
   * PreRequiste:
-*[Prerequisite section will not be there in actual exam]
-*Run below sqoop command to import products table from mysql into hive table product_new:
- **
+  *[Prerequisite section will not be there in actual exam]
+  *Run below sqoop command to import products table from mysql into hive table product_new:
+  **
  sqoop import \
-*--connect jdbc:mysql://quickstart.cloudera/retail_db \
-*--username root \
-*--password cloudera \
-*--table products \
-*--hive-import \
-*--create-hive-table \
-*--hive-database default \
-*--hive-table product_new \
-*--outdir /home/cloudera/outdir \
-*--bindir /home/cloudera/bindir
- **
+  *--connect jdbc:mysql://quickstart.cloudera/retail_db \
+  *--username root \
+  *--password cloudera \
+  *--table products \
+  *--hive-import \
+  *--create-hive-table \
+  *--hive-database default \
+  *--hive-table product_new \
+  *--outdir /home/cloudera/outdir \
+  *--bindir /home/cloudera/bindir
+  **
  Instructions:
-*Get products from metastore table named "product_new" whose price > 100 and save the results in HDFS in parquet format.
-*Output Requirement:
-*Result should be saved in /user/cloudera/practice1/problem8/output as parquet file
-*Files should be saved in Gzip compression.
- **
+  *Get products from metastore table named "product_new" whose price > 100 and save the results in HDFS in parquet format.
+  *Output Requirement:
+  *Result should be saved in /user/cloudera/practice1/problem8/output as parquet file
+  *Files should be saved in Gzip compression.
+  **
  [You will not be provided with any answer choice in actual exam.Below answers are just provided to guide you]
-*Important Information:
- **
+  *Important Information:
+  **
  In case hivecontext does not get created in your environment or table not found issue occurs.
-*Just check that SPARK_HOME/conf has hive_site.xml copied from /etc/hive/conf/hive_site.xml.
-*If in case any derby lock issue occurs, delete SPARK_HOME/metastore_db/dbex.lck to release the lock.
-*/
+  *Just check that SPARK_HOME/conf has hive_site.xml copied from /etc/hive/conf/hive_site.xml.
+  *If in case any derby lock issue occurs, delete SPARK_HOME/metastore_db/dbex.lck to release the lock.
+  */
+
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
 
 object exercise_6 {
   val spark = SparkSession
     .builder()
-    .appName("exercise 4")
+    .appName("exercise_6")
     .master("local[*]")
     .enableHiveSupport()
     .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
-    .config("spark.app.id", "exercise_5")  // To silence Metrics warning
+    .config("spark.app.id", "exercise_6")  // To silence Metrics warning
     .getOrCreate()
 
   val sc = spark.sparkContext
@@ -53,6 +52,7 @@ object exercise_6 {
   val rootPath = "hdfs://quickstart.cloudera/user/cloudera/practice1/problem8/"
 
   def main(args: Array[String]): Unit = {
+
     Logger.getRootLogger.setLevel(Level.ERROR)
 
     try {
@@ -110,5 +110,4 @@ object exercise_6 {
       println("SparkSession stopped.")
     }
   }
-
 }

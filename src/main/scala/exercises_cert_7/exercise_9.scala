@@ -1,9 +1,5 @@
 package exercises_cert_7
 
-import org.apache.log4j.{Level, Logger}
-import org.apache.spark.sql.{SparkSession}
-import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
-
 /**
 Question 7: Correct
 PreRequiste:
@@ -28,10 +24,13 @@ Input folder
 /user/cloudera/problem2/customer/tab
 
 Output Requirement:
-Result should be saved in /user/cloudera/problem2/customer/customer_json_new.
+Result should be saved in /user/cloudera/problem2/customer_json_new.
 Output should have state name followed by total number of customers in that state.
-*/
+  */
 
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.{SparkSession}
+import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
 // spark.eventLog.enabled = true
 // dependencies
@@ -44,7 +43,7 @@ object exercise_9 {
 
   val spark = SparkSession
     .builder()
-    .appName("exercise 9")
+    .appName("exercise_9")
     .master("local[*]")
     .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
     .config("spark.app.id", "exercise_9")  // To silence Metrics warning
@@ -58,6 +57,7 @@ object exercise_9 {
 
   def main(args: Array[String]): Unit = {
     try {
+
       Logger.getRootLogger.setLevel(Level.ERROR)
 
       val schema = StructType(List(StructField("id", IntegerType, false), StructField("fname",StringType, false), StructField("state", StringType, false)))
@@ -98,5 +98,4 @@ object exercise_9 {
       println("SparkSession stopped.")
     }
   }
-
 }

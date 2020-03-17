@@ -1,9 +1,5 @@
 package exercises_cert_7
 
-import org.apache.log4j.{Level, Logger}
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
-
 /**
 Question 1: Correct
 PreRequiste:[Prerequisite section will not be there in actual exam. Your exam environment will already be setup with required data]
@@ -36,11 +32,15 @@ For compression, below Hive property should be set to true
 SET hive.exec.compress.output=true;
 */
 
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
+
 object exercise_5 {
 
   val spark = SparkSession
     .builder()
-    .appName("exercise 4")
+    .appName("exercise_5")
     .master("local[*]")
     .enableHiveSupport()
     .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
@@ -94,5 +94,4 @@ object exercise_5 {
       println("SparkSession stopped.")
     }
   }
-
 }

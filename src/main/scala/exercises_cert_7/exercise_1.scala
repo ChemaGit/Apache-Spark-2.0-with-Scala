@@ -1,8 +1,5 @@
 package exercises_cert_7
 
-import org.apache.log4j.{Level, Logger}
-import org.apache.spark.sql.SparkSession
-
 /**
   * Question 4: Correct
   * Prerequiste:
@@ -24,6 +21,7 @@ import org.apache.spark.sql.SparkSession
   *
   *
   */
+
 /*
 sqoop import \
 --connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
@@ -44,14 +42,16 @@ sqoop import \
 --target-dir /user/cloudera/practice4/customers \
 --outdir /home/cloudera/outdir \
 --bindir /home/cloudera/bindir
-
  */
+
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
 
 object exercise_1 {
 
   val spark = SparkSession
     .builder()
-    .appName("exercise 1")
+    .appName("exercise_1")
     .master("local[*]")
     .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
     .config("spark.app.id", "exercise_1")  // To silence Metrics warning
@@ -67,9 +67,11 @@ object exercise_1 {
   val rootPath = "hdfs://quickstart.cloudera/user/cloudera/practice4/"
 
   def main(args: Array[String]): Unit = {
+
     Logger.getRootLogger.setLevel(Level.ERROR)
 
     try {
+
       import spark.implicits._
 
       val orders = sc
@@ -119,5 +121,4 @@ object exercise_1 {
     }
 
   }
-
 }
