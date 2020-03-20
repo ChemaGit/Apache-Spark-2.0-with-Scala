@@ -6,7 +6,7 @@
     - This course is an integral part of a Big Data Developer’s Career path. 
     - It will also encompass the fundamental concepts such as GraphX, SparkSQL, messaging system like Kafka, etc.
     
-# About this course
+# About this training
     - Master the concepts of HDFS
     - Understand Hadoop 2.x Architecture
     - Understand Spark and its Ecosystem
