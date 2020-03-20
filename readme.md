@@ -16,4 +16,7 @@
     - Understand Spark SQL and it’s architecture
     - Understand messaging system like Kafka and its components
     - Integrate Kafka with real time streaming
-    - Understand Graph and Spark GraphX
+    - Examples on Graph and Spark GraphX
+    - Examples on Spark MLib
+        - Supervised and Unsupervised algorithm examples
+        - Sentiment analysis on Twitter with Spark Streaming
