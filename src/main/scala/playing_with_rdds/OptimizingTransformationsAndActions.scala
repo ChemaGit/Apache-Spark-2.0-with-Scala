@@ -17,7 +17,6 @@ object OptimizingTransformationsAndActions {
     .builder()
     .appName("OptimizingTransformationsAndActions")
     .master("local[*]")
-    .enableHiveSupport()
     .config("spark.sql.shuffle.partitions", "4") //Change to a more reasonable default number of partitions for our data
     .config("spark.app.id", "OptimizingTransformationsAndActions")  // To silence Metrics warning
     .getOrCreate()
