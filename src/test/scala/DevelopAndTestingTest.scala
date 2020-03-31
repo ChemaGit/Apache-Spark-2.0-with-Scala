@@ -1,10 +1,10 @@
-
+import com.holdenkarau.spark.testing.SharedSparkContext
 import org.scalatest.FunSuite
 import org.scalatest.Matchers
 import spark_sql.DevelopAndTesting
 
 
-class DevelopAndTestingTest extends FunSuite with Matchers {
+class DevelopAndTestingTest extends FunSuite with SharedSparkContext with Matchers {
   test("distance calculation") {
     val start = (42.178, -82.556)
     val end = (42.229 , -82.5528)

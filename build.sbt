@@ -2,12 +2,12 @@ name := "apache-spark-2.0-scala"
 
 version := "0.1"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.11.10"
 
 libraryDependencies += "com.typesafe" % "config" % "1.3.2"
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25"
 
-dependencyOverrides += "junit" % "junit" % "4.10" % Test
+// dependencyOverrides += "junit" % "junit" % "4.10" % Test
 
 libraryDependencies += "org.apache.spark" %% "spark-core" % "2.2.0"
 libraryDependencies += "org.apache.spark" % "spark-sql_2.11" % "2.2.0"
@@ -28,7 +28,6 @@ libraryDependencies += "org.apache.spark" %% "spark-mllib" % "2.2.0" //% "runtim
 libraryDependencies += "com.databricks" %% "spark-avro" % "4.0.0"
 // https://mvnrepository.com/artifact/databricks/spark-csv
 libraryDependencies += "com.databricks" %% "spark-csv" % "1.5.0"
-libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.12"
 dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.9.5"
 dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.5"
 dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.9.5"
@@ -40,7 +39,10 @@ libraryDependencies += "org.apache.spark" %% "spark-streaming-twitter" % "1.6.3"
 libraryDependencies += "org.twitter4j" % "twitter4j-core" % "4.0.4"
 libraryDependencies += "org.twitter4j" % "twitter4j-stream" % "4.0.4"
 // https://mvnrepository.com/artifact/org.scalatest/scalatest
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.0-SNAP3"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.0-SNAP3" % Test
+
+// https://mvnrepository.com/artifact/com.holdenkarau/spark-testing-base
+libraryDependencies += "com.holdenkarau" %% "spark-testing-base" % "2.4.5_0.14.0" % Test
 
 /*
 libraryDependencies += "org.apache.hbase" % "hbase-client" % "1.1.8"
@@ -59,3 +61,4 @@ dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.
 }*/
 
 // excludeFilter in unmanagedSources := HiddenFileFilter || "*exercise*"
+
