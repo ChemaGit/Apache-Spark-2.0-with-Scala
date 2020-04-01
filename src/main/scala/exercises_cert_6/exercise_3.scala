@@ -35,7 +35,7 @@ $ sqoop import \
   --compress \
   --compression-codec snappy \
   --delete-target-dir \
-  --target-dir /user/cloudera/problem1/orders \
+  --target-dir /user/cloudera/problem1_in/orders \
   --outdir /home/cloudera/outdir \
   --bindir /home/cloudera/bindir
 
@@ -53,7 +53,7 @@ $ sqoop import \
   --compress \
   --compression-codec snappy \
   --delete-target-dir \
-  --target-dir /user/cloudera/problem1/order-items \
+  --target-dir /user/cloudera/problem1_in/order-items \
   --outdir /home/cloudera/outdir \
   --bindir /home/cloudera/bindir
 
@@ -81,7 +81,7 @@ object exercise_3 {
 
   val sc = spark.sparkContext
 
-  val inputpath = "hdfs://quickstart.cloudera/user/cloudera/problem1/"
+  val inputpath = "hdfs://quickstart.cloudera/user/cloudera/problem1_in/"
   val output = "hdfs://quickstart.cloudera/user/cloudera/problem1/"
 
   def main(args: Array[String]): Unit = {
@@ -207,7 +207,7 @@ object exercise_3 {
       resultSQL
         .repartition(1)
           .write
-          .jdbc("jdbc:mysql://quicstart.cloudera:3306/retail_export", "result_jdbc", props)
+          .jdbc("jdbc:mysql://quickstart.cloudera:3306/retail_export", "result_jdbc", props)
       // mysql> SELECT * FROM result_jdbc LIMIT 10;
 
       // // 10.create a table in HIVE named result_hive and load data from /user/cloudera/problem1/result4a-snappy

@@ -12,7 +12,7 @@ import org.apache.spark.streaming.{Seconds, StreamingContext}
 import twitter4j.Status
 import twitter4j.auth.OAuthAuthorization
 import twitter4j.conf.ConfigurationBuilder
-import org.apache.spark.Logging
+// import org.apache.spark.Logging
 
 /**
 Generally, regression refers to predicting a

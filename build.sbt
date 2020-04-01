@@ -7,7 +7,7 @@ scalaVersion := "2.11.10"
 libraryDependencies += "com.typesafe" % "config" % "1.3.2"
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25"
 
-// dependencyOverrides += "junit" % "junit" % "4.10" % Test
+dependencyOverrides += "junit" % "junit" % "4.10" % Test
 
 libraryDependencies += "org.apache.spark" %% "spark-core" % "2.2.0"
 libraryDependencies += "org.apache.spark" % "spark-sql_2.11" % "2.2.0"
@@ -43,6 +43,11 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.0-SNAP3" % Test
 
 // https://mvnrepository.com/artifact/com.holdenkarau/spark-testing-base
 libraryDependencies += "com.holdenkarau" %% "spark-testing-base" % "2.4.5_0.14.0" % Test
+
+// https://mvnrepository.com/artifact/mysql/mysql-connector-java
+libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.25"
+
+
 
 /*
 libraryDependencies += "org.apache.hbase" % "hbase-client" % "1.1.8"
