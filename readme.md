@@ -11,9 +11,15 @@
     - Understand Hadoop 2.x Architecture
     - Understand Spark and its Ecosystem
     - Implement Spark operations on Spark Shell
+    - Apache Spark architecture overview
+    - Input, partitioning, and parallelization
+    - Optimizations for efficiently operating on and joining multiple datasets
+    - How Spark instructions are translated into jobs and what causes multiple stages within a job
+    - Efficiently using Spark’s memory caching for iterative processing
     - Understand the role of Spark RDD
     - Work with RDD in Spark
     - Understand Spark SQL and it’s architecture
+    - Developing, testing, and debugging Spark applications using SBT, Eclipse, and IntelliJ
     - Understand messaging system like Kafka and its components
     - Integrate Kafka with real time streaming
     - Examples on Graph and Spark GraphX
