@@ -1,6 +1,6 @@
-package spark_mlib
+package spark_mlib.basic_statistics_and_data_types
 
-import org.apache.spark.mllib.linalg.{Vector, Vectors}
+import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.regression.LabeledPoint
 
 object VectorsAndLabeledPoints {

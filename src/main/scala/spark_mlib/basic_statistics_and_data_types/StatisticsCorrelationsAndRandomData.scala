@@ -1,13 +1,11 @@
-package spark_mlib
+package spark_mlib.basic_statistics_and_data_types
 
 import org.apache.log4j.{Level, Logger}
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.mllib.linalg.{Vector, Vectors}
-import org.apache.spark.mllib.linalg.{Matrices, Matrix}
-import org.apache.spark.rdd.RDD
-import org.apache.spark.mllib.stat.Statistics
-import org.apache.spark.mllib.stat.MultivariateStatisticalSummary
+import org.apache.spark.mllib.linalg.{Matrix, Vector, Vectors}
 import org.apache.spark.mllib.random.RandomRDDs._
+import org.apache.spark.mllib.stat.{MultivariateStatisticalSummary, Statistics}
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.SparkSession
 
 
 object StatisticsCorrelationsAndRandomData {

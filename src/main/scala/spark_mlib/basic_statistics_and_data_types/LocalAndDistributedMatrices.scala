@@ -1,12 +1,8 @@
-package spark_mlib
+package spark_mlib.basic_statistics_and_data_types
 
-import org.apache.spark.mllib.linalg.{Matrices, Matrix}
-import org.apache.spark.mllib.linalg.distributed.{IndexedRow, IndexedRowMatrix, RowMatrix}
-import org.apache.spark.mllib.linalg.distributed.MatrixEntry
-import org.apache.spark.mllib.linalg.distributed.CoordinateMatrix
+import org.apache.spark.mllib.linalg.distributed._
+import org.apache.spark.mllib.linalg.{Matrices, Vector, Vectors}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.mllib.linalg.distributed.RowMatrix
-import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.sql.SparkSession
 
 
