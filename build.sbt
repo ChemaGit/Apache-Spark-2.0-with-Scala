@@ -54,7 +54,6 @@ libraryDependencies += "org.apache.hbase" % "hbase-client" % "1.1.8"
 libraryDependencies += "org.apache.hbase" % "hbase-common" % "1.1.8"
 libraryDependencies += "org.apache.hbase" % "hbase-server" % "1.1.8"
 libraryDependencies += "org.apache.hbase" % "hbase-protocol" % "1.1.8"
-
 dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.9.5"
 dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.5"
 dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.9.5"
@@ -66,4 +65,3 @@ dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.
 }*/
 
 // excludeFilter in unmanagedSources := HiddenFileFilter || "*exercise*"
-
